@@ -1,6 +1,21 @@
+import subprocess
+import psutil
 from py4j.java_gateway import JavaGateway
 from py4j.java_gateway import GatewayParameters
 import sys
+import time
+
+__author__ = 'Sebastian Burgstaller-Muehlbacher'
+__license__ = 'AGPLv3'
+__copyright__ = 'Sebastian Burgstaller-Muehlbacher'
+
+if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
+    # compile and start py4j server
+    subprocess.call(["javac -cp '/usr/share/py4j/py4j0.10.2.1.jar:./cdk/cdk-1.5.13.jar' ./cdk/cdk_bridge.java"], shell=True)
+    p = subprocess.Popen(["java -cp './cdk:/usr/share/py4j/py4j0.10.2.1.jar:./cdk/cdk-1.5.13.jar' CDKBridge"], shell=True)
+
+    # wait 5 sec to start up JVM and server
+    time.sleep(5)
 
 # connect to the JVM
 gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
@@ -18,7 +33,6 @@ NullPointerException = java.lang.NullPointerException
 
 class Compound(object):
     def __init__(self, compound_string, identifier_type):
-
         self.compound_string = compound_string
         self.identifier_type = identifier_type
         self.mol_container = None
@@ -36,36 +50,7 @@ class Compound(object):
             smiles_parser = cdk.smiles.SmilesParser(cdk.DefaultChemObjectBuilder.getInstance())
             self.mol_container = smiles_parser.parseSmiles(self.compound_string)
 
-
-        # _chemobjbuilder = cdk.silent.SilentChemObjectBuilder.getInstance()
-        #
-        # chem_format="smi"
-        # # sg = cdk.smiles.SmilesGenerator.absolute().aromatic()
-        # mol = "CC(=O)Cl"
-        # mol = 'C/C(=C\C(=O)OCC(=O)[C@@]1(O)CCC2C1(C)CC(O)C1C2CCC2=CC(=O)C=CC12C)/CC/C=C(/CCC=C(C)C)\C'
-        # mol = 'C/C(=C\CNc1ccc(cc1)O)/C=C/C=C(/C=C/C1=C(C)CCCC1(C)C)\C'
-        # mol = 'C[BH]1H[BH](C)H1'
-        #
-        # sp = cdk.smiles.SmilesParser(cdk.DefaultChemObjectBuilder.getInstance())
-        #
-        # ans = sp.parseSmiles(mol)
-        # print(ans)
-        #
-        # sg = cdk.smiles.SmilesGenerator.isomeric()
-        # print(sg.create(ans))
-        #
-        # factory = cdk.inchi.InChIGeneratorFactory.getInstance()
-        # gen = factory.getInChIGenerator(ans)
-        # inchi = gen.getInchi()
-        # inchi_key = gen.getInchiKey()
-        # aux_info = gen.getAuxInfo()
-        #
-        #
-        # print(inchi)
-        # print(inchi_key)
-        # print(aux_info)
-
-    def get_smiles(self):
+    def get_smiles(self, smiles_type='generic'):
         smiles_generator = cdk.smiles.SmilesGenerator.isomeric()
         return smiles_generator.create(self.mol_container)
 
@@ -91,6 +76,13 @@ def main():
     print(cmpnd.get_smiles())
     print(cmpnd.get_inchi_key())
     print(cmpnd.get_inchi())
+
+    print('ran through')
+    time.sleep(5)
+
+    # The py4j server process can either be killed by shutting down the gateway or killing the process directly
+    # gateway.shutdown()
+    # p.kill()
 
 if __name__ == '__main__':
     sys.exit(main())
