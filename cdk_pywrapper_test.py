@@ -31,6 +31,18 @@ def main():
         print(cmpnd.get_inchi())
         print('----------------------------')
 
+    smiles = [
+        '[Ba++].[O-][Fe]([O-])(=O)=O'
+    ]
+
+    for smile in smiles:
+
+        cmpnd = cdk_pywrapper.Compound(compound_string=smile, identifier_type='smiles')
+        print(cmpnd.get_smiles())
+        print(cmpnd.get_inchi_key())
+        print(cmpnd.get_inchi())
+        print('----------------------------')
+
 if __name__ == '__main__':
     sys.exit(main())
 
