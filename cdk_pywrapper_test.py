@@ -31,17 +31,28 @@ def main():
         print(cmpnd.get_inchi())
         print('----------------------------')
 
+    # group of compounds with same connectivity but different configuration:
+    # https://pubchem.ncbi.nlm.nih.gov/rest/rdf/inchikey/MNQDKWZEUULFPX-UHFFFAOYSA-M.html
     smiles = [
-        '[Ba++].[O-][Fe]([O-])(=O)=O'
+        '[Ba++].[O-][Fe]([O-])(=O)=O',
+        'CCN1C2=CC=CC=C2SC1=CC=CC=CC3=[N+](C4=CC=CC=C4S3)CC.[I-]',
+        'CCN\\1C2=CC=CC=C2S/C1=C\C=C\C=C\C3=[N+](C4=CC=CC=C4S3)CC.[I-]',
+        'CCN\\1C2=CC=CC=C2S/C1=C/C=C/C=C/C3=[N+](C4=CC=CC=C4S3)CC.[I-]',
+        'CCN\\1C2=CC=CC=C2S/C1=C\\C=C\\C=C/C3=[N+](C4=CC=CC=C4S3)CC.[I-]',
+        'CCN\\1C2=CC=CC=C2S/C1=C/C=C/C=CC3=[N+](C4=CC=CC=C4S3)CC.[I-]',
+        'CC1=CC=CC=C1OCC2=CC=CC=C2/C(=N\OC)/C(=O)OC'
     ]
 
     for smile in smiles:
+        try:
+            cmpnd = cdk_pywrapper.Compound(compound_string=smile, identifier_type='smiles')
+            print(cmpnd.get_smiles())
+            print(cmpnd.get_inchi_key())
+            print(cmpnd.get_inchi())
+            print('----------------------------')
 
-        cmpnd = cdk_pywrapper.Compound(compound_string=smile, identifier_type='smiles')
-        print(cmpnd.get_smiles())
-        print(cmpnd.get_inchi_key())
-        print(cmpnd.get_inchi())
-        print('----------------------------')
+        except ValueError as e:
+            print(e)
 
 if __name__ == '__main__':
     sys.exit(main())
