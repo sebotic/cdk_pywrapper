@@ -56,8 +56,16 @@ class Compound(object):
             print(e)
             raise ValueError('Invalid {} provided!'.format(self.identifier_type))
 
-    def get_smiles(self, smiles_type='generic'):
-        smiles_generator = cdk.smiles.SmilesGenerator.isomeric()
+    def get_smiles(self, smiles_type='isomeric'):
+        if smiles_type == 'isomeric':
+            smiles_generator = cdk.smiles.SmilesGenerator.isomeric()
+        elif smiles_type == 'unique':
+            smiles_generator = cdk.smiles.SmilesGenerator.unique()
+        elif smiles_type == 'generic':
+            smiles_generator = cdk.smiles.SmilesGenerator.generic()
+        else:
+            smiles_generator = cdk.smiles.SmilesGenerator.absolute()
+
         return smiles_generator.create(self.mol_container)
 
     def get_inchi_key(self):
