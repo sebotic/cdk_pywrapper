@@ -40,13 +40,26 @@ def main():
         'CCN\\1C2=CC=CC=C2S/C1=C/C=C/C=C/C3=[N+](C4=CC=CC=C4S3)CC.[I-]',
         'CCN\\1C2=CC=CC=C2S/C1=C\\C=C\\C=C/C3=[N+](C4=CC=CC=C4S3)CC.[I-]',
         'CCN\\1C2=CC=CC=C2S/C1=C/C=C/C=CC3=[N+](C4=CC=CC=C4S3)CC.[I-]',
-        'CC1=CC=CC=C1OCC2=CC=CC=C2/C(=N\OC)/C(=O)OC'
+        'CC1=CC=CC=C1OCC2=CC=CC=C2/C(=N\OC)/C(=O)OC',
+        'CCCCCC/C=C\CCCCCCCC(=O)O',
+        'CC(C)(C)c1nc(c2cccc(NS(=O)(=O)c3c(F)cccc3F)c2F)c(s1)c4ccnc(N)n4',
+        'CC(C)(C)C1=NC(C2=CC=CC(NS(=O)(=O)N(C)(CC))=C2F)=C(S1)C4=CC=NC(N)=N4',
+        'C1=CC2=C(C=C1O)C(=CN2)C[C@@H](C(=O)[O-])[NH3+]',
+        'CN/C(=C\[N+](=O)[O-])/NCCSCC1=CC=C(O1)CN(C)C',
+        'CN/C(=C/[N+](=O)[O-])/NCCSCC1=CC=C(O1)CN(C)C',
+        'COCCOC[C@H](CC1(CCCC1)C(=O)N[C@@H]2CC[C@@H](CC2)C(=O)O)C(=O)Oc3ccc4CCCc4c3',
+        'C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N',
+        'C[C@]([C@H]1C[C@@]23CC[C@@]1([C@H]4[C@@]25CCN([C@@H]3CC6=C5C(=C(C=C6)O)O4)CC7CC7)OC)(C(C)(C)CC)O',
+        'CC(=O)O[Hg]c1cc(ccc1O)C(CC(C)(C)C)(C)C'
     ]
 
     for smile in smiles:
         try:
             cmpnd = cdk_pywrapper.Compound(compound_string=smile, identifier_type='smiles')
-            print(cmpnd.get_smiles())
+            print(cmpnd.get_smiles(smiles_type='isomeric'))
+            print(cmpnd.get_smiles(smiles_type='unique'))
+            print(cmpnd.get_smiles(smiles_type='absolute'))
+            print(cmpnd.get_smiles(smiles_type='generic'))
             print(cmpnd.get_inchi_key())
             print(cmpnd.get_inchi())
             print('----------------------------')
