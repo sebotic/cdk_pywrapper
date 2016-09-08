@@ -50,7 +50,8 @@ def main():
         'COCCOC[C@H](CC1(CCCC1)C(=O)N[C@@H]2CC[C@@H](CC2)C(=O)O)C(=O)Oc3ccc4CCCc4c3',
         'C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N',
         'C[C@]([C@H]1C[C@@]23CC[C@@]1([C@H]4[C@@]25CCN([C@@H]3CC6=C5C(=C(C=C6)O)O4)CC7CC7)OC)(C(C)(C)CC)O',
-        'CC(=O)O[Hg]c1cc(ccc1O)C(CC(C)(C)C)(C)C'
+        'CC(=O)O[Hg]c1cc(ccc1O)C(CC(C)(C)C)(C)C',
+        'CC(=O)O.CC(C)(C)CC(C)(C)[C]1C=CC(=C=C1)[O-].[Hg+]'
     ]
 
     for smile in smiles:
