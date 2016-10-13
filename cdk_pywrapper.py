@@ -1,6 +1,8 @@
 import subprocess
 import psutil
 from py4j.java_gateway import JavaGateway, GatewayParameters
+# from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
+
 from py4j.protocol import Py4JJavaError
 import sys
 import time
@@ -18,27 +20,37 @@ if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.proces
     time.sleep(5)
 
 # connect to the JVM
-gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
+# gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
+# gateway = ClientServer(
+#     java_parameters=JavaParameters(),
+#     python_parameters=PythonParameters())
+
 
 # shorten paths
-cdk = gateway.jvm.org.openscience.cdk
-java = gateway.jvm.java
-javax = gateway.jvm.javax
+# cdk = gateway.jvm.org.openscience.cdk
+# java = gateway.jvm.java
+# javax = gateway.jvm.javax
 
 # map exceptions
-InvalidSmilesException = cdk.exception.InvalidSmilesException
-CDKException = cdk.exception.CDKException
-NullPointerException = java.lang.NullPointerException
+# InvalidSmilesException = cdk.exception.InvalidSmilesException
+# CDKException = cdk.exception.CDKException
+# NullPointerException = java.lang.NullPointerException
 
 
 class Compound(object):
     def __init__(self, compound_string, identifier_type):
         assert(identifier_type in ['smiles', 'inchi'])
 
+        gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
+
+        self.cdk = gateway.jvm.org.openscience.cdk
+        java = gateway.jvm.java
+        javax = gateway.jvm.javax
+
         self.compound_string = compound_string
         self.identifier_type = identifier_type
         self.mol_container = None
-        self.inchi_factory = cdk.inchi.InChIGeneratorFactory.getInstance()
+        self.inchi_factory = self.cdk.inchi.InChIGeneratorFactory.getInstance()
 
         allowed_types = ['smiles', 'inchi']
 
@@ -47,10 +59,10 @@ class Compound(object):
         try:
             if self.identifier_type == 'inchi':
                 s = self.inchi_factory.getInChIToStructure(self.compound_string,
-                                                           cdk.DefaultChemObjectBuilder.getInstance())
+                                                           self.cdk.DefaultChemObjectBuilder.getInstance())
                 self.mol_container = s.getAtomContainer()
             elif self.identifier_type == 'smiles':
-                smiles_parser = cdk.smiles.SmilesParser(cdk.DefaultChemObjectBuilder.getInstance())
+                smiles_parser = self.cdk.smiles.SmilesParser(self.cdk.DefaultChemObjectBuilder.getInstance())
                 self.mol_container = smiles_parser.parseSmiles(self.compound_string)
         except Py4JJavaError as e:
             print(e)
@@ -58,13 +70,13 @@ class Compound(object):
 
     def get_smiles(self, smiles_type='isomeric'):
         if smiles_type == 'isomeric':
-            smiles_generator = cdk.smiles.SmilesGenerator.isomeric()
+            smiles_generator = self.cdk.smiles.SmilesGenerator.isomeric()
         elif smiles_type == 'unique':
-            smiles_generator = cdk.smiles.SmilesGenerator.unique()
+            smiles_generator = self.cdk.smiles.SmilesGenerator.unique()
         elif smiles_type == 'generic':
-            smiles_generator = cdk.smiles.SmilesGenerator.generic()
+            smiles_generator = self.cdk.smiles.SmilesGenerator.generic()
         else:
-            smiles_generator = cdk.smiles.SmilesGenerator.absolute()
+            smiles_generator = self.cdk.smiles.SmilesGenerator.absolute()
 
         return smiles_generator.create(self.mol_container)
 
