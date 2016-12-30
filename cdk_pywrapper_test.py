@@ -51,7 +51,16 @@ def main():
         'C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N',
         'C[C@]([C@H]1C[C@@]23CC[C@@]1([C@H]4[C@@]25CCN([C@@H]3CC6=C5C(=C(C=C6)O)O4)CC7CC7)OC)(C(C)(C)CC)O',
         'CC(=O)O[Hg]c1cc(ccc1O)C(CC(C)(C)C)(C)C',
-        'CC(=O)O.CC(C)(C)CC(C)(C)[C]1C=CC(=C=C1)[O-].[Hg+]'
+        'CC(=O)O.CC(C)(C)CC(C)(C)[C]1C=CC(=C=C1)[O-].[Hg+]',
+        'N/C(N)=C([N+]([O-])=O)\[N+]([O-])=O',
+        'CC(C)C1=C(C(=C(N1CC[C@H](C[C@H](CC(=O)O)O)O)C2=CC=C(C=C2)F)C3=CC=CC=C3)C(=O)NC4=CC=CC=C4',
+        'c1cc(ccc1/N=N/c2ccc(c(c2)OS(=O)O)N)OS(=O)O.[Na+].[Na+]',
+        'Clc1ccc2Nc4ccccc4C(=N\c2c1)/N3CCNCC3',
+        '[Yb][Yb][Yb][Ag][Ag]',
+        'N[C@@H](CSSC[C@H](N)C(O)=O)C(O)=O'
+        'CC1(C\\2CCC1(C(=O)/C2=C/c3ccc(cc3)C=O)CS(=O)(=O)[O-])C.[Na+]',
+        'CNC(=O)C1=CC=CC=C1NC2=NC(=NC=C2Cl)NC3=CC=C(C=C3)N4CCN(CCCN)CC4'
+
     ]
 
     for smile in smiles:
@@ -67,6 +76,14 @@ def main():
 
         except ValueError as e:
             print(e)
+
+    cmpnd = cdk_pywrapper.Compound(compound_string='InChI=1S/C5H10N2O3/c6-3(5(9)10)1-2-4(7)8/h3H,1-2,6H2,(H2,7,8)(H,9,10)/p-1',
+                                   identifier_type='inchi')
+    print(cmpnd.get_smiles(smiles_type='generic'))
+    print(cmpnd.get_inchi_key())
+    print(cmpnd.get_inchi())
+
+    # cdk_pywrapper.gateway.shutdown()
 
 if __name__ == '__main__':
     sys.exit(main())
