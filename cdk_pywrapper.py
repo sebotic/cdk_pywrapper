@@ -13,8 +13,8 @@ __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
 if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
     # compile and start py4j server
-    subprocess.call(["javac -cp '/usr/share/py4j/py4j0.10.2.1.jar:./cdk/cdk-1.5.13.jar' ./cdk/cdk_bridge.java"], shell=True)
-    p = subprocess.Popen(["java -cp './cdk:/usr/share/py4j/py4j0.10.2.1.jar:./cdk/cdk-1.5.13.jar' CDKBridge"], shell=True)
+    subprocess.call(["javac -cp '/usr/share/py4j/py4j0.10.4.jar:./cdk/cdk-1.5.13.jar' ./cdk/cdk_bridge.java"], shell=True)
+    p = subprocess.Popen(["java -cp './cdk:/usr/share/py4j/py4j0.10.4.jar:./cdk/cdk-1.5.13.jar' CDKBridge"], shell=True)
 
     # wait 5 sec to start up JVM and server
     time.sleep(5)
@@ -44,7 +44,7 @@ class Compound(object):
         gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
 
         self.cdk = gateway.jvm.org.openscience.cdk
-        java = gateway.jvm.java
+        self.java = gateway.jvm.java
         javax = gateway.jvm.javax
 
         self.compound_string = compound_string
@@ -87,6 +87,32 @@ class Compound(object):
     def get_inchi(self):
         gen = self.inchi_factory.getInChIGenerator(self.mol_container)
         return gen.getInchi()
+
+    def get_mol2(self, filename=''):
+        """
+        A method to convert a molecule to the mol2 format and optionally write it to a file
+        :param filename: the filename, the mol2 file should be written to.
+        :type filename: str
+        :return: A mol2 file in string format
+        """
+        sdg = self.cdk.layout.StructureDiagramGenerator(self.mol_container)
+        sdg.generateCoordinates()
+
+        writer = self.java.io.StringWriter()
+        mol2writer = self.cdk.io.Mol2Writer(writer)
+
+        mol2writer.writeMolecule(self.mol_container)
+        mol2writer.close()
+
+        mol2string = writer.toString()
+
+        if filename:
+            with open(filename, "w") as text_file:
+                text_file.write(mol2string)
+
+        return mol2string
+
+
 
 
 def main():
