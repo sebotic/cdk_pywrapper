@@ -5,7 +5,7 @@
 * Primary purpose: 
   * Generate diverse chemical compound identifiers (SMILES, InChI)
   * Inter-convert between these identifiers
-* Fully compatible to Python 3
+* Fully compatible to Python 3.x
 
 ### Motivation
 The chemistry world only has a small number of open tools, e.g. [OpenBabel](http://openbabel.org) and the 
