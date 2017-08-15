@@ -7,6 +7,7 @@ __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
 '''A main method with a list of InChIs. These are then used to generate SMILES and InChI keys.'''
 
+
 def main():
     test_inchis = [
         'InChI=1S/C23H18ClF2N3O3S/c1-2-9-33(31,32)29-19-8-7-18(25)20(21(19)26)22(30)17-12-28-23-16(17)10-14(11-27-23)13-3-5-15(24)6-4-13/h3-8,10-12,29H,2,9H2,1H3,(H,27,28)',
@@ -29,6 +30,7 @@ def main():
         print(cmpnd.get_smiles())
         print(cmpnd.get_inchi_key())
         print(cmpnd.get_inchi())
+        print(cmpnd.get_mol2())
         print('----------------------------')
 
     # group of compounds with same connectivity but different configuration:
@@ -59,7 +61,12 @@ def main():
         '[Yb][Yb][Yb][Ag][Ag]',
         'N[C@@H](CSSC[C@H](N)C(O)=O)C(O)=O'
         'CC1(C\\2CCC1(C(=O)/C2=C/c3ccc(cc3)C=O)CS(=O)(=O)[O-])C.[Na+]',
-        'CNC(=O)C1=CC=CC=C1NC2=NC(=NC=C2Cl)NC3=CC=C(C=C3)N4CCN(CCCN)CC4'
+        'CNC(=O)C1=CC=CC=C1NC2=NC(=NC=C2Cl)NC3=CC=C(C=C3)N4CCN(CCCN)CC4',
+        'OC(=O)CN/C(=N\c1ccc(C#N)cc1)NC2CCCCCCCC2',
+        'N[C@@]12C[C@]3(O[N+]([O-])=O)C[C@@](C2)(CC)C[C@@](C1)(CC)C3',
+        'C1C2CC3CC1(ON(OO))CC(C2)(C3)N',
+        '[N+](=O)([O-])OC12CC3(CC(CC(C1)(C3)N)(C2)CC)CC',
+        'COc1cc(c(cc1C(=O)N[C@@H]2CC[N@@]3CCC[C@H]2C3)Cl)N'
 
     ]
 
@@ -72,6 +79,7 @@ def main():
             print(cmpnd.get_smiles(smiles_type='generic'))
             print(cmpnd.get_inchi_key())
             print(cmpnd.get_inchi())
+            print(cmpnd.get_mol2())
             print('----------------------------')
 
         except ValueError as e:
