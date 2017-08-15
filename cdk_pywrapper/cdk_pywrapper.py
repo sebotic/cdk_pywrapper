@@ -1,20 +1,32 @@
 import subprocess
-import psutil
-from py4j.java_gateway import JavaGateway, GatewayParameters
-# from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
-
-from py4j.protocol import Py4JJavaError
 import sys
 import time
+
+from py4j.java_gateway import JavaGateway, GatewayParameters
+from py4j.protocol import Py4JJavaError
+
+from config import py4j_path, cdk_path
+
+# from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
 __author__ = 'Sebastian Burgstaller-Muehlbacher'
 __license__ = 'AGPLv3'
 __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
-if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
+
+server_process_running = False
+with subprocess.Popen(['ps aux | grep CDK'], shell=True, stdout=subprocess.PIPE) as proc:
+    line = proc.stdout.read()
+    print(line)
+    if 'CDKBridge' in str(line):
+        print('process running')
+        server_process_running = True
+
+# if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
+if not server_process_running:
     # compile and start py4j server
-    subprocess.call(["javac -cp '/usr/share/py4j/py4j0.10.4.jar:./cdk/cdk-1.5.13.jar' ./cdk/cdk_bridge.java"], shell=True)
-    p = subprocess.Popen(["java -cp './cdk:/usr/share/py4j/py4j0.10.4.jar:./cdk/cdk-1.5.13.jar' CDKBridge"], shell=True)
+    subprocess.call(["javac -cp '{}' ./cdk/cdk_bridge.java".format(py4j_path)], shell=True)
+    p = subprocess.Popen(["java -cp './cdk:{}:{}' CDKBridge".format(py4j_path, cdk_path)], shell=True)
 
     # wait 5 sec to start up JVM and server
     time.sleep(5)
