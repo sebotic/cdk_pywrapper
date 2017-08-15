@@ -5,7 +5,8 @@ import time
 from py4j.java_gateway import JavaGateway, GatewayParameters
 from py4j.protocol import Py4JJavaError
 
-from config import py4j_path, cdk_path
+# import cdk_pywrapper.config as config
+from cdk_pywrapper.config import py4j_path, cdk_path
 
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
