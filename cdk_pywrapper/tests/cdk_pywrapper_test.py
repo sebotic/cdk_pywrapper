@@ -1,4 +1,4 @@
-import cdk_pywrapper
+from cdk_pywrapper.cdk_pywrapper import Compound
 import sys
 
 __author__ = 'Sebastian Burgstaller-Muehlbacher'
@@ -26,7 +26,7 @@ def main():
 
     for inchi in test_inchis:
 
-        cmpnd = cdk_pywrapper.Compound(compound_string=inchi, identifier_type='inchi')
+        cmpnd = Compound(compound_string=inchi, identifier_type='inchi')
         print(cmpnd.get_smiles())
         print(cmpnd.get_inchi_key())
         print(cmpnd.get_inchi())
@@ -72,7 +72,7 @@ def main():
 
     for smile in smiles:
         try:
-            cmpnd = cdk_pywrapper.Compound(compound_string=smile, identifier_type='smiles')
+            cmpnd = Compound(compound_string=smile, identifier_type='smiles')
             print(cmpnd.get_smiles(smiles_type='isomeric'))
             print(cmpnd.get_smiles(smiles_type='unique'))
             print(cmpnd.get_smiles(smiles_type='absolute'))
@@ -85,7 +85,7 @@ def main():
         except ValueError as e:
             print(e)
 
-    cmpnd = cdk_pywrapper.Compound(compound_string='InChI=1S/C5H10N2O3/c6-3(5(9)10)1-2-4(7)8/h3H,1-2,6H2,(H2,7,8)(H,9,10)/p-1',
+    cmpnd = Compound(compound_string='InChI=1S/C5H10N2O3/c6-3(5(9)10)1-2-4(7)8/h3H,1-2,6H2,(H2,7,8)(H,9,10)/p-1',
                                    identifier_type='inchi')
     print(cmpnd.get_smiles(smiles_type='generic'))
     print(cmpnd.get_inchi_key())
