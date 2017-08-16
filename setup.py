@@ -6,10 +6,10 @@ MAJOR_VERSION = 0
 MINOR_VERSION = 0
 MICRO_VERSION = 1
 
-REPO_URL = 'https://github.com/sulab/WikidataIntegrator'
+REPO_URL = 'https://github.com/sebotic/cdk_pywrapper'
 
 setup(
-    name='wikidataintegrator',
+    name='cdk_pywrapper',
     version="{}.{}.{}".format(MAJOR_VERSION, MINOR_VERSION, MICRO_VERSION),
     author='Sebastian Burgstaller-Muehlbacher',
     author_email='sburgs@scripps.edu',
