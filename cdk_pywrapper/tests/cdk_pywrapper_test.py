@@ -66,7 +66,9 @@ def main():
         'N[C@@]12C[C@]3(O[N+]([O-])=O)C[C@@](C2)(CC)C[C@@](C1)(CC)C3',
         'C1C2CC3CC1(ON(OO))CC(C2)(C3)N',
         '[N+](=O)([O-])OC12CC3(CC(CC(C1)(C3)N)(C2)CC)CC',
-        'COc1cc(c(cc1C(=O)N[C@@H]2CC[N@@]3CCC[C@H]2C3)Cl)N'
+        'COc1cc(c(cc1C(=O)N[C@@H]2CC[N@@]3CCC[C@H]2C3)Cl)N',
+        'OCN(C(=O)N(CO)C)',
+        '[O-][n+]1cc[n+](c2c1cccc2)[O-]'
 
     ]
 
