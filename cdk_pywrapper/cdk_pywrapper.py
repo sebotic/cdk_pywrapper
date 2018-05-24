@@ -1,12 +1,23 @@
 import subprocess
 import sys
 import time
+import os
+import atexit
 
+import py4j
 from py4j.java_gateway import JavaGateway, GatewayParameters
 from py4j.protocol import Py4JJavaError
 
 # import cdk_pywrapper.config as config
+import cdk_pywrapper
+print(cdk_pywrapper.__path__)
 from cdk_pywrapper.config import py4j_path, cdk_path
+
+cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('/')[:-4])
+cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
+
+py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
+py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
@@ -26,8 +37,12 @@ with subprocess.Popen(['ps aux | grep CDK'], shell=True, stdout=subprocess.PIPE)
 # if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
 if not server_process_running:
     # compile and start py4j server
-    subprocess.call(["javac -cp '{}' ./cdk/cdk_bridge.java".format(py4j_path)], shell=True)
-    p = subprocess.Popen(["java -cp './cdk:{}:{}' CDKBridge".format(py4j_path, cdk_path)], shell=True)
+    # print(os.getcwd())
+    # subprocess.call(["javac -cp '{}:.{}' ../cdk/cdk_bridge.java".format(py4j_path, cdk_path)], shell=True)
+    # print('compiled sucessfully')
+    p = subprocess.Popen(["java -cp '{}:{}:{}/' CDKBridge".format(py4j_jar_path,
+                                                                        os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
+                                                                        cdk_jar_path)], shell=True)
 
     # wait 5 sec to start up JVM and server
     time.sleep(5)
@@ -49,16 +64,22 @@ if not server_process_running:
 # CDKException = cdk.exception.CDKException
 # NullPointerException = java.lang.NullPointerException
 
+gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
+
+
+# make sure the Java gateway server is shut down at exit of Python
+@atexit.register
+def cleanup_gateway():
+    gateway.shutdown()
+
 
 class Compound(object):
     def __init__(self, compound_string, identifier_type):
         assert(identifier_type in ['smiles', 'inchi'])
 
-        gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
-
         self.cdk = gateway.jvm.org.openscience.cdk
         self.java = gateway.jvm.java
-        javax = gateway.jvm.javax
+        # javax = gateway.jvm.javax
 
         self.compound_string = compound_string
         self.identifier_type = identifier_type
@@ -125,7 +146,25 @@ class Compound(object):
 
         return mol2string
 
+    def get_fingerprint(self):
+        fingerprinter = self.cdk.fingerprint.Fingerprinter()
+        fingerprint = fingerprinter.getBitFingerprint(self.mol_container)
+        # raw_fingerprint = fingerprinter.getRawFingerprint(self.mol_container)
+        print('Fingerprint size:', fingerprint.size())
+        print(fingerprint.asBitSet())
+        # print('raw fingerprint', raw_fingerprint)
+        return fingerprint
 
+    def get_bitmap_fingerprint(self):
+        fingerprinter = self.cdk.fingerprint.Fingerprinter()
+        fingerprint = fingerprinter.getBitFingerprint(self.mol_container)
+        return fingerprint.asBitSet()
+
+    def get_tanimoto(self, other_molecule):
+        return self.cdk.similarity.Tanimoto.calculate(self.get_fingerprint(), other_molecule.get_fingerprint())
+
+    def get_tanimoto_from_bitset(self, other_molecule):
+        return self.cdk.similarity.Tanimoto.calculate(self.get_bitmap_fingerprint(), other_molecule.get_bitmap_fingerprint())
 
 
 def main():
