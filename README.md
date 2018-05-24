@@ -23,9 +23,10 @@ from cdk_pywrapper.cdk_pywrapper import Compound
 
 smiles = 'CCN1C2=CC=CC=C2SC1=CC=CC=CC3=[N+](C4=CC=CC=C4S3)CC.[I-]'
 cmpnd = Compound(compound_string=smiles, identifier_type='smiles')
-cmpnd.get_inchi_key()
+ikey = cmpnd.get_inchi_key()
+print(ikey)
 
-'MNQDKWZEUULFPX-UHFFFAOYSA-M'
 ```
+Output: 'MNQDKWZEUULFPX-UHFFFAOYSA-M'
 
 
