@@ -16,6 +16,19 @@ I found several issues which make it hard to use:
 * Generating InChI (keys) from SMILES often either does not work or struggles with stereochemistry.
 * InChI cannot be used as input format.
 
+### Installation
+
+```bash
+git clone https://github.com/sebotic/cdk_pywrapper.git
+cd cdk_pywrapper
+
+pip install .
+
+```
+
+This will install the package on your local system, it will download the CDK and it will build the cdk_bride.java.
+So after that, cdk_pywrapper should be ready to use, like in the example below.
+
 ### Example
 
 ```python
