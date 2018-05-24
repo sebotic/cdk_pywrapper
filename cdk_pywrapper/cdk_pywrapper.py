@@ -21,6 +21,10 @@ py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__ve
 
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
+# set dev classpaths
+if not __debug__:
+    cdk_jar_path = './cdk'
+
 __author__ = 'Sebastian Burgstaller-Muehlbacher'
 __license__ = 'AGPLv3'
 __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
@@ -183,10 +187,6 @@ def main():
 
     print('ran through')
     time.sleep(5)
-
-    # The py4j server process can either be killed by shutting down the gateway or killing the process directly
-    # gateway.shutdown()
-    # p.kill()
 
 if __name__ == '__main__':
     sys.exit(main())
