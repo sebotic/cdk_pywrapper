@@ -31,6 +31,7 @@ def main():
         print(cmpnd.get_inchi_key())
         print(cmpnd.get_inchi())
         print(cmpnd.get_mol2())
+        print(cmpnd.get_fingerprint())
         print('----------------------------')
 
     # group of compounds with same connectivity but different configuration:
@@ -68,7 +69,12 @@ def main():
         '[N+](=O)([O-])OC12CC3(CC(CC(C1)(C3)N)(C2)CC)CC',
         'COc1cc(c(cc1C(=O)N[C@@H]2CC[N@@]3CCC[C@H]2C3)Cl)N',
         'OCN(C(=O)N(CO)C)',
-        '[O-][n+]1cc[n+](c2c1cccc2)[O-]'
+        '[O-][n+]1cc[n+](c2c1cccc2)[O-]',
+        '[2H]C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C([2H])([2H])C(O)=O',
+        'CS(O)(=O)=O.[H][C@@]12CC(C)C(C(=O)CN3CCN(CC3)c3cc(nc(n3)N3CCCC3)N3CCCC3)[C@@]1(C)CC=C1[C@@]2([H])CCC2=CC(=O)C=C[C@]12C',
+        'OCCCC(O)=O',
+        'Cc1nnc(s1)SCC2=C(N3[C@@H]([C@@H](C3=O)NC(=O)Cn4cnnn4)SC2)C(=O)[O-]',
+        'CC(=O)Oc1ccc(cc1)C(c1ccc(OC(C)=O)cc1)c1ccccn1'
 
     ]
 
@@ -82,6 +88,9 @@ def main():
             print(cmpnd.get_inchi_key())
             print(cmpnd.get_inchi())
             print(cmpnd.get_mol2())
+            print(cmpnd.get_fingerprint())
+            print(cmpnd.get_tanimoto(Compound(compound_string='C1C2CC3CC1(ON(OO))CC(C2)(C3)N', identifier_type='smiles')))
+            print(cmpnd.get_tanimoto_from_bitset(Compound(compound_string='C1C2CC3CC1(ON(OO))CC(C2)(C3)N', identifier_type='smiles')))
             print('----------------------------')
 
         except ValueError as e:
@@ -94,6 +103,7 @@ def main():
     print(cmpnd.get_inchi())
 
     # cdk_pywrapper.gateway.shutdown()
+
 
 if __name__ == '__main__':
     sys.exit(main())
