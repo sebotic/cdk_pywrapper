@@ -16,4 +16,16 @@ I found several issues which make it hard to use:
 * Generating InChI (keys) from SMILES often either does not work or struggles with stereochemistry.
 * InChI cannot be used as input format.
 
+### Example
+
+```python
+from cdk_pywrapper.cdk_pywrapper import Compound
+
+smiles = 'CCN1C2=CC=CC=C2SC1=CC=CC=CC3=[N+](C4=CC=CC=C4S3)CC.[I-]'
+cmpnd = Compound(compound_string=smiles, identifier_type='smiles')
+cmpnd.get_inchi_key()
+
+'MNQDKWZEUULFPX-UHFFFAOYSA-M'
+```
+
 
