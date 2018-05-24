@@ -31,7 +31,7 @@ So after that, cdk_pywrapper should be ready to use, like in the example below.
 
 Don't forget to use e.g. sudo for global installation or pip3 for Python 3.
 
-I will also host this on pypi soon, so no repo cloning will be required.
+I will also host this on pypi soon, so no repo cloning will be required. I have tested it on Linux and MacOS, not sure if it would work on Windows.
 
 ### Example
 
