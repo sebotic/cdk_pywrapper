@@ -26,8 +26,10 @@ pip install .
 
 ```
 
-This will install the package on your local system, it will download the CDK and it will build the cdk_bride.java.
+This will install the package on your local system, it will download the CDK and it will build the cdk_bridge.java.
 So after that, cdk_pywrapper should be ready to use, like in the example below.
+
+Don't forget to use e.g. sudo for global installation or pip3 for Phython 3. 
 
 ### Example
 
