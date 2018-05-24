@@ -19,7 +19,7 @@ MICRO_VERSION = 1
 REPO_URL = 'https://github.com/sebotic/cdk_pywrapper'
 
 subprocess.check_call(["wget https://github.com/cdk/cdk/releases/download/{0}/{0}.jar "
-                 "--directory-prefix={1}".format(cdk_version, cdk_jar_path)], shell=True)
+                       "--directory-prefix={1}".format(cdk_version, cdk_jar_path)], shell=True)
 
 subprocess.check_call(["javac -cp '{}:{}' ./cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
                                                                                       cdk_jar)], shell=True)
