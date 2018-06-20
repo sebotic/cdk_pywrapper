@@ -91,6 +91,7 @@ def main():
             print(cmpnd.get_fingerprint())
             print(cmpnd.get_tanimoto(Compound(compound_string='C1C2CC3CC1(ON(OO))CC(C2)(C3)N', identifier_type='smiles')))
             print(cmpnd.get_tanimoto_from_bitset(Compound(compound_string='C1C2CC3CC1(ON(OO))CC(C2)(C3)N', identifier_type='smiles')))
+            print(cmpnd.get_molfile())
             print('----------------------------')
 
         except ValueError as e:

@@ -150,6 +150,30 @@ class Compound(object):
 
         return mol2string
 
+    def get_molfile(self, filename=''):
+        """
+        A method to convert a molecule to molfile V2000 (MDLV2000) format and optionally write it to a file
+        :param filename: the filename, the molfile V2000 (MDLV2000) file should be written to.
+        :type filename: str
+        :return: A molfile V2000 (MDLV2000) file in string format
+        """
+        sdg = self.cdk.layout.StructureDiagramGenerator(self.mol_container)
+        sdg.generateCoordinates()
+
+        writer = self.java.io.StringWriter()
+        molfile_writer = self.cdk.io.MDLV2000Writer(writer)
+
+        molfile_writer.writeMolecule(self.mol_container)
+        molfile_writer.close()
+
+        molfile2string = writer.toString()
+
+        if filename:
+            with open(filename, "w") as text_file:
+                text_file.write(molfile2string)
+
+        return molfile2string
+
     def get_fingerprint(self):
         fingerprinter = self.cdk.fingerprint.Fingerprinter()
         fingerprint = fingerprinter.getBitFingerprint(self.mol_container)
