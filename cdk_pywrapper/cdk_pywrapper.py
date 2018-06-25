@@ -71,10 +71,11 @@ if not server_process_running:
 gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
 
 
-# make sure the Java gateway server is shut down at exit of Python
+# make sure the Java gateway server is shut down at exit of Python, but don't shut down if it has already been running
 @atexit.register
 def cleanup_gateway():
-    gateway.shutdown()
+    if not server_process_running:
+        gateway.shutdown()
 
 
 class Compound(object):
