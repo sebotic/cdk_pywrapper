@@ -79,14 +79,14 @@ def cleanup_gateway():
 
 
 class Compound(object):
-    def __init__(self, compound_string, identifier_type):
+    def __init__(self, compound_string, identifier_type, suppress_hydrogens=False, add_explicit_hydrogens=False):
         assert(identifier_type in ['smiles', 'inchi'])
 
         self.cdk = gateway.jvm.org.openscience.cdk
         self.java = gateway.jvm.java
         # javax = gateway.jvm.javax
 
-        self.compound_string = compound_string
+        self.compound_string = compound_string.strip()
         self.identifier_type = identifier_type
         self.mol_container = None
         self.inchi_factory = self.cdk.inchi.InChIGeneratorFactory.getInstance()
@@ -96,13 +96,26 @@ class Compound(object):
         if self.identifier_type not in allowed_types:
             raise ValueError('Not a valid identifier type')
         try:
+            builder = self.cdk.DefaultChemObjectBuilder.getInstance()
             if self.identifier_type == 'inchi':
-                s = self.inchi_factory.getInChIToStructure(self.compound_string,
-                                                           self.cdk.DefaultChemObjectBuilder.getInstance())
+                s = self.inchi_factory.getInChIToStructure(self.compound_string, builder)
                 self.mol_container = s.getAtomContainer()
             elif self.identifier_type == 'smiles':
-                smiles_parser = self.cdk.smiles.SmilesParser(self.cdk.DefaultChemObjectBuilder.getInstance())
+
+                smiles_parser = self.cdk.smiles.SmilesParser(builder)
                 self.mol_container = smiles_parser.parseSmiles(self.compound_string)
+
+            if suppress_hydrogens:
+                self.mol_container = self.cdk.tools.manipulator.AtomContainerManipulator.copyAndSuppressedHydrogens(
+                    self.mol_container)
+
+            if add_explicit_hydrogens:
+                self.cdk.tools.manipulator.AtomContainerManipulator\
+                    .percieveAtomTypesAndConfigureAtoms(self.mol_container)
+                self.cdk.tools.CDKHydrogenAdder.getInstance(builder).addImplicitHydrogens(self.mol_container)
+                self.cdk.tools.manipulator.AtomContainerManipulator\
+                    .convertImplicitToExplicitHydrogens(self.mol_container)
+
         except Py4JJavaError as e:
             print(e)
             raise ValueError('Invalid {} provided!'.format(self.identifier_type))
