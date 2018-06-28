@@ -208,6 +208,19 @@ class Compound(object):
     def get_tanimoto_from_bitset(self, other_molecule):
         return self.cdk.similarity.Tanimoto.calculate(self.get_bitmap_fingerprint(), other_molecule.get_bitmap_fingerprint())
 
+    def get_svg(self, file_name=None):
+        dg = self.cdk.depict.DepictionGenerator().withAtomColors()
+
+        if file_name:
+            if not file_name.split('.')[-1].lower() == 'svg':
+                file_name += '.svg'
+
+            dg.depict(self.mol_container).writeTo(file_name)
+            return ''
+
+        else:
+            return dg.depict(self.mol_container).toSvgStr()
+
 
 def main():
     test_inchi = 'InChI=1S/C23H18ClF2N3O3S/c1-2-9-33(31,32)29-19-8-7-18(25)20(21(19)26)22(30)17-12-28-23-16(17)10-14(11-27-23)13-3-5-15(24)6-4-13/h3-8,10-12,29H,2,9H2,1H3,(H,27,28)'
