@@ -80,41 +80,44 @@ def cleanup_gateway():
 
 class Compound(object):
     def __init__(self, compound_string, identifier_type, suppress_hydrogens=False, add_explicit_hydrogens=False):
-        assert(identifier_type in ['smiles', 'inchi'])
+        allowed_types = ['smiles', 'inchi', 'atom_container']
+        assert(identifier_type in allowed_types)
 
         self.cdk = gateway.jvm.org.openscience.cdk
         self.java = gateway.jvm.java
         # javax = gateway.jvm.javax
 
-        self.compound_string = compound_string.strip()
         self.identifier_type = identifier_type
         self.mol_container = None
         self.inchi_factory = self.cdk.inchi.InChIGeneratorFactory.getInstance()
 
-        allowed_types = ['smiles', 'inchi']
-
         if self.identifier_type not in allowed_types:
             raise ValueError('Not a valid identifier type')
         try:
-            builder = self.cdk.DefaultChemObjectBuilder.getInstance()
-            if self.identifier_type == 'inchi':
-                s = self.inchi_factory.getInChIToStructure(self.compound_string, builder)
-                self.mol_container = s.getAtomContainer()
-            elif self.identifier_type == 'smiles':
+            if identifier_type == 'atom_container':
+                self.compound_string = compound_string
+                self.mol_container = self.compound_string
+            else:
+                self.compound_string = compound_string.strip()
+                builder = self.cdk.DefaultChemObjectBuilder.getInstance()
+                if self.identifier_type == 'inchi':
+                    s = self.inchi_factory.getInChIToStructure(self.compound_string, builder)
+                    self.mol_container = s.getAtomContainer()
+                elif self.identifier_type == 'smiles':
 
-                smiles_parser = self.cdk.smiles.SmilesParser(builder)
-                self.mol_container = smiles_parser.parseSmiles(self.compound_string)
+                    smiles_parser = self.cdk.smiles.SmilesParser(builder)
+                    self.mol_container = smiles_parser.parseSmiles(self.compound_string)
 
-            if suppress_hydrogens:
-                self.mol_container = self.cdk.tools.manipulator.AtomContainerManipulator.copyAndSuppressedHydrogens(
-                    self.mol_container)
+                if suppress_hydrogens:
+                    self.mol_container = self.cdk.tools.manipulator.AtomContainerManipulator.copyAndSuppressedHydrogens(
+                        self.mol_container)
 
-            if add_explicit_hydrogens:
-                self.cdk.tools.manipulator.AtomContainerManipulator\
-                    .percieveAtomTypesAndConfigureAtoms(self.mol_container)
-                self.cdk.tools.CDKHydrogenAdder.getInstance(builder).addImplicitHydrogens(self.mol_container)
-                self.cdk.tools.manipulator.AtomContainerManipulator\
-                    .convertImplicitToExplicitHydrogens(self.mol_container)
+                if add_explicit_hydrogens:
+                    self.cdk.tools.manipulator.AtomContainerManipulator\
+                        .percieveAtomTypesAndConfigureAtoms(self.mol_container)
+                    self.cdk.tools.CDKHydrogenAdder.getInstance(builder).addImplicitHydrogens(self.mol_container)
+                    self.cdk.tools.manipulator.AtomContainerManipulator\
+                        .convertImplicitToExplicitHydrogens(self.mol_container)
 
         except Py4JJavaError as e:
             print(e)
@@ -139,6 +142,17 @@ class Compound(object):
     def get_inchi(self):
         gen = self.inchi_factory.getInChIGenerator(self.mol_container)
         return gen.getInchi()
+
+    def get_tautomers(self):
+        tautomer_generator = self.cdk.tautomers.InChITautomerGenerator()
+        tautomers = tautomer_generator.getTautomers(self.mol_container)
+        # py4j.java_collections.JavaList('o16', gateway)
+        # mol1 = tautomers[0]
+        t_obj = [Compound(compound_string=x, identifier_type='atom_container') for x in tautomers]
+        print([t.get_inchi_key() for t in t_obj])
+        print(*[t.get_inchi() for t in t_obj], sep='\n')
+        print(*[t.get_smiles() for t in t_obj], sep='\n')
+        return list(tautomers)
 
     def get_mol2(self, filename=''):
         """
@@ -220,6 +234,10 @@ class Compound(object):
 
         else:
             return dg.depict(self.mol_container).toSvgStr()
+
+    def get_molecular_weight(self):
+        weight_descriptor = self.cdk.qsar.descriptors.molecular.WeightDescriptor()
+        return weight_descriptor.calculate(self.mol_container).getValue().toString()
 
 
 def main():
