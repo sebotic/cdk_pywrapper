@@ -3,6 +3,7 @@ import sys
 import time
 import os
 import atexit
+import platform
 
 import py4j
 from py4j.java_gateway import JavaGateway, GatewayParameters
@@ -19,6 +20,22 @@ cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
 py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
 py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
+# make sure host paths are set correctly,
+# TODO: test if this can reasonably be replace by finding full path using 'which' shell command
+host_os = platform.system()
+ps_path = 'ps'
+java_path = 'java'
+grep_path = 'grep'
+
+if host_os == 'Darwin':
+    ps_path = '/bin/ps'
+    java_path = '/usr/bin/java'
+    grep_path = '/usr/bin/grep'
+elif host_os == 'Linux':
+    ps_path = '/usr/bin/ps'
+    java_path = '/usr/bin/java'
+    grep_path = '/usr/bin/grep'
+
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
 # set dev classpaths
@@ -31,7 +48,7 @@ __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
 
 server_process_running = False
-with subprocess.Popen(['ps aux | grep CDK'], shell=True, stdout=subprocess.PIPE) as proc:
+with subprocess.Popen(['{} aux | {} CDK'.format(ps_path, grep_path)], shell=True, stdout=subprocess.PIPE) as proc:
     line = proc.stdout.read()
     print(line)
     if 'CDKBridge' in str(line):
@@ -44,7 +61,7 @@ if not server_process_running:
     # print(os.getcwd())
     # subprocess.call(["javac -cp '{}:.{}' ../cdk/cdk_bridge.java".format(py4j_path, cdk_path)], shell=True)
     # print('compiled sucessfully')
-    p = subprocess.Popen(["java -cp '{}:{}:{}/' CDKBridge".format(py4j_jar_path,
+    p = subprocess.Popen(["{} -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
                                                                         os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
                                                                         cdk_jar_path)], shell=True)
 
