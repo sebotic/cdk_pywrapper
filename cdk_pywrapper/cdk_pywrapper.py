@@ -103,7 +103,7 @@ def cleanup_gateway():
 def search_substructure(pattern, molecules):
     g = JavaGateway.launch_gateway(classpath="{}:{}:{}/".format(py4j_jar_path,
                                                                 os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
-                                                                cdk_jar_path))
+                                                                cdk_jar_path), java_path=java_path)
 
     search_handler = g.jvm.SearchHandler(MapConverter().convert(molecules, g._gateway_client))
 
