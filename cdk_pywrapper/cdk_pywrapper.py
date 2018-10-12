@@ -4,9 +4,11 @@ import time
 import os
 import atexit
 import platform
+import copy
 
 import py4j
 from py4j.java_gateway import JavaGateway, GatewayParameters
+from py4j.java_collections import SetConverter, MapConverter, ListConverter
 from py4j.protocol import Py4JJavaError
 
 # import cdk_pywrapper.config as config
@@ -59,8 +61,11 @@ with subprocess.Popen(['{} aux | {} CDK'.format(ps_path, grep_path)], shell=True
 if not server_process_running:
     # compile and start py4j server
     # print(os.getcwd())
-    # subprocess.call(["javac -cp '{}:.{}' ../cdk/cdk_bridge.java".format(py4j_path, cdk_path)], shell=True)
-    # print('compiled sucessfully')
+    # subprocess.check_call(["javac -cp '{}:.{}' ../cdk/cdk_bridge.java".format(py4j_path, cdk_path)], shell=True)
+
+    # subprocess.check_call(["javac -cp '{}:{}' ../cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
+    #                                                              '../cdk_pywrapper/cdk/cdk-2.1.1.jar')], shell=True)
+    # # print('compiled sucessfully')
     p = subprocess.Popen(["{} -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
                                                                         os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
                                                                         cdk_jar_path)], shell=True)
@@ -95,6 +100,22 @@ def cleanup_gateway():
         gateway.shutdown()
 
 
+def search_substructure(pattern, molecules):
+    g = JavaGateway.launch_gateway(classpath="{}:{}:{}/".format(py4j_jar_path,
+                                                                os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
+                                                                cdk_jar_path))
+
+    search_handler = g.jvm.SearchHandler(MapConverter().convert(molecules, g._gateway_client))
+
+    matches = search_handler.searchPattern(pattern)
+
+    results = copy.deepcopy([{'id': copy.deepcopy(str(compound_id)), 'match_count': copy.deepcopy(int(match_count)),
+                              'svg': copy.deepcopy(str(svg))}
+                             for compound_id, match_count, svg in matches])
+    g.shutdown()
+    return results
+
+
 class Compound(object):
     def __init__(self, compound_string, identifier_type, suppress_hydrogens=False, add_explicit_hydrogens=False):
         allowed_types = ['smiles', 'inchi', 'atom_container']
@@ -102,7 +123,6 @@ class Compound(object):
 
         self.cdk = gateway.jvm.org.openscience.cdk
         self.java = gateway.jvm.java
-        # javax = gateway.jvm.javax
 
         self.identifier_type = identifier_type
         self.mol_container = None
@@ -239,8 +259,31 @@ class Compound(object):
     def get_tanimoto_from_bitset(self, other_molecule):
         return self.cdk.similarity.Tanimoto.calculate(self.get_bitmap_fingerprint(), other_molecule.get_bitmap_fingerprint())
 
-    def get_svg(self, file_name=None):
-        dg = self.cdk.depict.DepictionGenerator().withAtomColors()
+    def get_molecule_signature(self):
+        molecule_signature = self.cdk.signature.MoleculeSignature(self.mol_container)
+        return molecule_signature.toCanonicalString()
+
+    def substructure_search(self, smarts='O=CO'):
+        querytool = self.cdk.smiles.smarts.SMARTSQueryTool(smarts, self.cdk.DefaultChemObjectBuilder.getInstance())
+        status = querytool.matches(self.mol_container)
+
+        if status:
+            nmatch = querytool.countMatches()
+            mappings = querytool.getMatchingAtoms()
+            for i in range(nmatch):
+                print(mappings.get(i))
+
+        return ''
+
+    def get_svg(self, file_name=None, substructures=None):
+        if substructures:
+            color = self.java.awt.Color.orange
+            dg = self.cdk.depict.DepictionGenerator()\
+                .withHighlight(substructures, color)\
+                .withAtomColors()\
+                .withOuterGlowHighlight(4.0)
+        else:
+            dg = self.cdk.depict.DepictionGenerator().withAtomColors()
 
         if file_name:
             if not file_name.split('.')[-1].lower() == 'svg':
@@ -255,6 +298,37 @@ class Compound(object):
     def get_molecular_weight(self):
         weight_descriptor = self.cdk.qsar.descriptors.molecular.WeightDescriptor()
         return weight_descriptor.calculate(self.mol_container).getValue().toString()
+
+    @staticmethod
+    def search_substructure(search_string, molecules, svg_return_count=10):
+        """A slow version of a substructure search going back and forth btwn Java and Python"""
+
+        cdk = gateway.jvm.org.openscience.cdk
+        pattern = cdk.smiles.smarts.SmartsPattern.create(search_string)
+        results = []
+
+        for count, (compound_id, smiles) in enumerate(molecules):
+            try:
+                mol = Compound(compound_string=smiles, identifier_type='smiles')
+            except ValueError as e:
+                continue
+
+            mappings = pattern.matchAll(mol.mol_container)
+            match_count = mappings.countUnique()
+            if match_count > 0:
+                substructures = mappings.toChemObjects()
+                svg = ''
+                if len(results) <= svg_return_count:
+                    svg = mol.get_svg(substructures=substructures)
+
+                results.append({
+                    'compound_id': compound_id,
+                    'smiles': smiles,
+                    'svg': svg
+                })
+                # print(svg)
+
+        return results
 
 
 def main():
