@@ -93,6 +93,7 @@ class SearchHandler {
         try {
             Pattern pattern = SmartsPattern.create(p);
 
+            int totalCount = 0;
             for (Map.Entry<String, IAtomContainer> entry : moleculeContainers.entrySet()) {
                 String key = entry.getKey();
                 IAtomContainer ac = entry.getValue();
@@ -108,6 +109,12 @@ class SearchHandler {
                     tmp.add(1, String.valueOf(match_count));
                     tmp.add(2, svg);
                     matches.add(tmp);
+
+                    totalCount += 1;
+                }
+
+                if (totalCount > 200) {
+                    return matches;
                 }
             }
 
