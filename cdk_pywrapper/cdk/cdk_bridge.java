@@ -48,7 +48,7 @@ class SearchHandler {
     }
 
     public int buildSubstructureIndex(HashMap<String, String> mols) {
-        ConcurrentHashMap<String,String> molecules = new ConcurrentHashMap<> (mols);
+        ConcurrentHashMap<String, String> molecules = new ConcurrentHashMap<>(mols);
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         SmilesParser parser = new SmilesParser(builder);
 
@@ -108,7 +108,7 @@ class SearchHandler {
 
     public ArrayList<ArrayList> searchPattern(String p, HashMap<String, String> mols) {
 
-        ConcurrentHashMap<String,String> molecules = new ConcurrentHashMap<> (mols);
+        ConcurrentHashMap<String, String> molecules = new ConcurrentHashMap<>(mols);
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         SmilesParser parser = new SmilesParser(builder);
 
@@ -122,7 +122,7 @@ class SearchHandler {
             return new ArrayList();
         }
 
-        ConcurrentHashMap<String, ArrayList> ma = new ConcurrentHashMap<> ();
+        ConcurrentHashMap<String, ArrayList> ma = new ConcurrentHashMap<>();
 
         molecules.forEach(
                 1,
