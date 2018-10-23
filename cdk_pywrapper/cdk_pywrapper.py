@@ -105,9 +105,10 @@ def search_substructure(pattern, molecules):
                                                                 os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
                                                                 cdk_jar_path), java_path=java_path)
 
-    search_handler = g.jvm.SearchHandler(MapConverter().convert(molecules, g._gateway_client))
+    # search_handler = g.jvm.SearchHandler(MapConverter().convert(molecules, g._gateway_client))
+    search_handler = g.jvm.SearchHandler()
 
-    matches = search_handler.searchPattern(pattern)
+    matches = search_handler.searchPattern(pattern, MapConverter().convert(molecules, g._gateway_client))
 
     results = copy.deepcopy([{'id': copy.deepcopy(str(compound_id)), 'match_count': copy.deepcopy(int(match_count)),
                               'svg': copy.deepcopy(str(svg))}
