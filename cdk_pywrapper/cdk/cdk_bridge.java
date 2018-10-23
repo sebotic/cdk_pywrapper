@@ -84,9 +84,7 @@ class SearchHandler {
 
         ConcurrentHashMap<String, ArrayList> ma = new ConcurrentHashMap<>();
 
-        molecules.forEach(
-                1,
-                (k, v) -> {
+        molecules.forEach(1, (k, v) -> {
                     if (this.totalCount < 200) {
                         try {
 
