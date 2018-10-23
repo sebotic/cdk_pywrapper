@@ -47,47 +47,7 @@ class SearchHandler {
 //        this.buildSubstructureIndex(molecules);
     }
 
-    public int buildSubstructureIndex(HashMap<String, String> mols) {
-        ConcurrentHashMap<String, String> molecules = new ConcurrentHashMap<>(mols);
-        IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-        SmilesParser parser = new SmilesParser(builder);
 
-        molecules.forEach(
-                1,
-                (k, v) -> {
-                    try {
-                        this.moleculeContainers.put(k, parser.parseSmiles(v));
-
-                    } catch (InvalidSmilesException e) {
-                        System.err.println(e.getMessage());
-                    }
-
-                });
-
-//        moleculeContainers = new ConcurrentHashMap<String, IAtomContainer> (molecules);
-
-
-//        int counter = 0;
-//        for (Map.Entry<String, String> entry : molecules.entrySet()) {
-//            String id = entry.getKey();
-//            String smiles = entry.getValue();
-//
-//
-//            try {
-//                IAtomContainer c = parser.parseSmiles(smiles);
-//                counter += 1;
-//                this.moleculeContainers.put(id, c);
-//
-//            } catch (InvalidSmilesException e) {
-//                System.err.println(e.getMessage());
-//            }
-//        }
-//
-//        System.out.println("Molecule Container size: " + this.moleculeContainers.size());
-//
-//        return counter;
-        return molecules.size();
-    }
 
     public String getSVG(IAtomContainer c, Iterable<IChemObject> substructures) {
         Color color = Color.orange;
