@@ -54,7 +54,6 @@ class SearchHandler {
 
         molecules.forEach(
                 1,
-
                 (k, v) -> {
                     try {
                         this.moleculeContainers.put(k, parser.parseSmiles(v));
@@ -63,8 +62,7 @@ class SearchHandler {
                         System.err.println(e.getMessage());
                     }
 
-                }
-        );
+                });
 
 //        moleculeContainers = new ConcurrentHashMap<String, IAtomContainer> (molecules);
 
@@ -128,7 +126,6 @@ class SearchHandler {
 
         molecules.forEach(
                 1,
-
                 (k, v) -> {
                     if (this.totalCount < 200) {
                         try {
