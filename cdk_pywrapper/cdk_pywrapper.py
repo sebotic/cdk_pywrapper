@@ -163,11 +163,24 @@ class Compound(object):
 
     def get_smiles(self, smiles_type='isomeric'):
         if smiles_type == 'isomeric':
-            smiles_generator = self.cdk.smiles.SmilesGenerator.isomeric()
+            smiles_flavor = self.cdk.smiles.SmiFlavor.Isomeric
+            smiles_generator = self.cdk.smiles.SmilesGenerator(smiles_flavor)
         elif smiles_type == 'unique':
             smiles_generator = self.cdk.smiles.SmilesGenerator.unique()
         elif smiles_type == 'generic':
             smiles_generator = self.cdk.smiles.SmilesGenerator.generic()
+
+        elif smiles_type == 'use_aromatic_symbols':
+            # need to add aromaticity information first before generating aromatic smiles
+            aromaticity = self.cdk.aromaticity.Aromaticity(self.cdk.aromaticity.ElectronDonation.daylight(),
+                                                           self.cdk.graph.Cycles.all())
+            try:
+                aromaticity.apply(self.mol_container)
+            except Exception as e:
+                print(e)
+
+            smiles_flavor = self.cdk.smiles.SmiFlavor.UseAromaticSymbols
+            smiles_generator = self.cdk.smiles.SmilesGenerator(smiles_flavor)
         else:
             smiles_generator = self.cdk.smiles.SmilesGenerator.absolute()
 
