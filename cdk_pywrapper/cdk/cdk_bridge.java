@@ -13,6 +13,9 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObject;
 
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.cdk.smiles.SmiFlavor;
+import org.openscience.cdk.smiles.SmilesGenerator;
+
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.smiles.smarts.SmartsPattern;
@@ -20,6 +23,10 @@ import org.openscience.cdk.isomorphism.Pattern;
 import org.openscience.cdk.isomorphism.Mappings;
 import org.openscience.cdk.depict.DepictionGenerator;
 
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.aromaticity.ElectronDonation;
+import org.openscience.cdk.graph.Cycles;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 import java.util.*;
 import java.io.IOException;
@@ -72,7 +79,25 @@ class SearchHandler {
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         SmilesParser parser = new SmilesParser(builder);
 
-//        final int totalCount = 0;
+
+        try {
+            IAtomContainer patternMol = parser.parseSmiles(p);
+            Aromaticity aromaticity = new Aromaticity(ElectronDonation.daylight(),
+                    Cycles.all());
+
+            aromaticity.apply(patternMol);
+
+            patternMol = AtomContainerManipulator.copyAndSuppressedHydrogens(patternMol);
+
+            SmilesGenerator sg = new SmilesGenerator(SmiFlavor.UseAromaticSymbols);
+            p = sg.create(patternMol);
+
+
+        } catch (InvalidSmilesException e) {
+            System.err.println(e.getMessage());
+        } catch (CDKException e) {
+
+        }
 
         try {
             this.pattern = SmartsPattern.create(p);
