@@ -66,7 +66,7 @@ if not server_process_running:
     # subprocess.check_call(["javac -cp '{}:{}' ../cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
     #                                                              '../cdk_pywrapper/cdk/cdk-2.1.1.jar')], shell=True)
     # # print('compiled sucessfully')
-    p = subprocess.Popen(["{} -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
+    p = subprocess.Popen(["{} -DCdkUseLegacyAtomContainer=false -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
                                                                         os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
                                                                         cdk_jar_path)], shell=True)
 
@@ -204,6 +204,19 @@ class Compound(object):
         print(*[t.get_inchi() for t in t_obj], sep='\n')
         print(*[t.get_smiles() for t in t_obj], sep='\n')
         return list(tautomers)
+
+    def get_stereocenters(self):
+        stereocenters = self.cdk.stereo.Stereocenters.of(self.mol_container)
+        for x in range(self.mol_container.getAtomCount()):
+            if stereocenters.isStereocenter(x):
+                s_atom = self.mol_container.getAtom(x)
+                connected_atoms = []
+                for bond in s_atom.bonds():
+                    connected_atoms.append(bond.getOther(s_atom))
+                print(connected_atoms)
+            print(x)
+        print(stereocenters)
+        return stereocenters
 
     def get_mol2(self, filename=''):
         """
