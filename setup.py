@@ -8,7 +8,7 @@ import os
 py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
 py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
-cdk_version = 'cdk-2.1.1'
+cdk_version = 'cdk-2.2'
 cdk_jar_path = './cdk_pywrapper/cdk/'
 cdk_jar = cdk_jar_path + cdk_version + '.jar'
 
