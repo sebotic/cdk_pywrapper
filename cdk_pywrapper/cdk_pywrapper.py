@@ -66,8 +66,8 @@ if not server_process_running:
     # subprocess.check_call(["javac -cp '{}:{}' ../cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
     #                                                              '../cdk_pywrapper/cdk/cdk-2.1.1.jar')], shell=True)
     # # print('compiled sucessfully')
-    p = subprocess.Popen(["{} -DCdkUseLegacyAtomContainer=false -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
-                                                                        os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
+    p = subprocess.Popen(["{} -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
+                                                                        os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
                                                                         cdk_jar_path)], shell=True)
 
     # wait 5 sec to start up JVM and server
@@ -207,16 +207,133 @@ class Compound(object):
 
     def get_stereocenters(self):
         stereocenters = self.cdk.stereo.Stereocenters.of(self.mol_container)
+        sc = []
+
         for x in range(self.mol_container.getAtomCount()):
             if stereocenters.isStereocenter(x):
-                s_atom = self.mol_container.getAtom(x)
-                connected_atoms = []
-                for bond in s_atom.bonds():
-                    connected_atoms.append(bond.getOther(s_atom))
-                print(connected_atoms)
-            print(x)
-        print(stereocenters)
-        return stereocenters
+                sc.append((str(stereocenters.elementType(x)), str(stereocenters.stereocenterType(x)), x))
+
+        return sc
+
+    def get_configuration_class(self):
+
+        for se in self.mol_container.stereoElements():
+            config_class = se.getConfigClass()
+            print(config_class)
+
+            print(se.getStereo())
+
+            if config_class == self.cdk.interfaces.IStereoElement.TH:
+                print('tetrahedral')
+            elif config_class == self.cdk.interfaces.IStereoElement.CT:
+                print('cis-trans')
+            elif config_class == self.cdk.interfaces.IStereoElement.Octahedral:
+                print('octaheral')
+            elif config_class == self.cdk.interfaces.IStereoElement.AL:
+                print('extended tetrahedral')
+            elif config_class == self.cdk.interfaces.IStereoElement.AT:
+                print('atropisomeric')
+            elif config_class == self.cdk.interfaces.IStereoElement.SP:
+                print('square planar')
+            elif config_class == self.cdk.interfaces.IStereoElement.SPY:
+                print('square pyramidal')
+            elif config_class == self.cdk.interfaces.IStereoElement.TBPY:
+                print('trigonal bipyramidal')
+            elif config_class == self.cdk.interfaces.IStereoElement.PBPY:
+                print('pentagonal bipyramidal')
+            elif config_class == self.cdk.interfaces.IStereoElement.HBPY8:
+                print('hexagonal bipyramidal')
+            elif config_class == self.cdk.interfaces.IStereoElement.HBPY9:
+                print('heptagonal bipyramidal')
+
+            configuration = se.getConfigOrder()
+            if configuration == self.cdk.interfaces.IStereoElement.LEFT:
+                print('left')
+            elif configuration == self.cdk.interfaces.IStereoElement.RIGHT:
+                print('right')
+            elif configuration == self.cdk.interfaces.IStereoElement.OPPOSITE:
+                print('opposite')
+            elif configuration == self.cdk.interfaces.IStereoElement.TOGETHER:
+                print('together')
+            print(configuration)
+            print('---------------------------------')
+
+    def get_chirality(self):
+        configurations = [x[0] for x in self.get_configuration_order()]
+        raw_stereocenters = [element_type for (element_type, sterecenter_type, atom_number) in self.get_stereocenters()
+                             if element_type == 'Tetracoordinate']
+
+        if len(configurations) != len(raw_stereocenters):
+            return 'racemate'
+        elif len(raw_stereocenters) == 0 or (len(set(configurations).intersection(set(['R', 'S'])))
+                                             == 2 and self.has_point_symmetry()):
+            return 'achiral'
+        else:
+            return 'chiral'
+
+    def get_configuration_order(self):
+        configurations = []
+        for se in self.mol_container.stereoElements():
+            conf = str(self.cdk.geometry.cip.CIPTool.getCIPChirality(self.mol_container, se))
+
+            # that is not the IUPAC naming convention atom number but a CDK internal representation
+            focus_atom_number = se.getFocus().getIndex()
+
+            configurations.append((conf, focus_atom_number))
+
+        return configurations
+
+    def has_point_symmetry(self):
+        atom_count = self.mol_container.getAtomCount()
+        qr = self.cdk.signature.SignatureQuotientGraph(self.mol_container)
+        if atom_count % 2 == 0 and qr.getVertexCount() <= atom_count / 2 and qr.getVertexCount() == qr.getEdgeCount():
+            return True
+        elif (atom_count - 1) % 2 == 0 and (atom_count - 1) / 2 >= qr.getVertexCount() > qr.getEdgeCount():
+            return True
+        else:
+            return False
+
+    def get_monoisotopic_mass(self):
+        weight = self.cdk.qsar.descriptors.molecular.WeightDescriptor()
+        # print(weight.getDescriptorNames())
+
+        return weight.calculate(self.mol_container).getValue().toString()
+
+    def get_natural_mass(self):
+        mass = self.cdk.tools.manipulator.AtomContainerManipulator()
+        return mass.getNaturalExactMass(self.mol_container)
+
+    def get_mw(self):
+        return self.cdk.tools.manipulator.AtomContainerManipulator().getMolecularWeight(self.mol_container)
+
+    def get_tpsa(self):
+        return self.cdk.qsar.descriptors.molecular.TPSADescriptor().calculate(self.mol_container).getValue().toString()
+
+    def get_rotable_bond_count(self):
+        return self.cdk.qsar.descriptors.molecular.RotatableBondsCountDescriptor()\
+            .calculate(self.mol_container).getValue().toString()
+
+    def get_hbond_acceptor_count(self):
+        return self.cdk.qsar.descriptors.molecular.HBondAcceptorCountDescriptor() \
+            .calculate(self.mol_container).getValue().toString()
+
+    def get_hbond_donor_count(self):
+        return self.cdk.qsar.descriptors.molecular.HBondDonorCountDescriptor() \
+            .calculate(self.mol_container).getValue().toString()
+
+    def get_xlogp(self):
+        return self.cdk.qsar.descriptors.molecular.XLogPDescriptor() \
+            .calculate(self.mol_container).getValue().toString()
+
+    def get_ro5_failures(self):
+        return self.cdk.qsar.descriptors.molecular.RuleOfFiveDescriptor() \
+            .calculate(self.mol_container).getValue().toString()
+
+    def get_acidic_group_count(self):
+        agcd = self.cdk.qsar.descriptors.molecular.AcidicGroupCountDescriptor()
+        agcd.initialise(self.cdk.DefaultChemObjectBuilder.getInstance())
+        return agcd.calculate(self.mol_container).getValue().toString()
+
 
     def get_mol2(self, filename=''):
         """
