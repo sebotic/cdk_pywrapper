@@ -211,7 +211,14 @@ class Compound(object):
 
         for x in range(self.mol_container.getAtomCount()):
             if stereocenters.isStereocenter(x):
-                sc.append((str(stereocenters.elementType(x)), str(stereocenters.stereocenterType(x)), x))
+                sc.append((
+                    str(stereocenters.elementType(x)),
+                    str(stereocenters.stereocenterType(x)),
+                    x,
+                    self.mol_container.getAtom(x).getSymbol())
+                )
+                # print(str(stereocenters.stereocenterType(x)))
+                # print(self.mol_container.getAtom(x).getSymbol())
 
         return sc
 
@@ -260,8 +267,13 @@ class Compound(object):
 
     def get_chirality(self):
         configurations = [x[0] for x in self.get_configuration_order()]
-        raw_stereocenters = [element_type for (element_type, sterecenter_type, atom_number) in self.get_stereocenters()
-                             if element_type == 'Tetracoordinate']
+        raw_stereocenters = [element_type for (element_type, sterecenter_type, atom_number, element_symbol) in
+                             self.get_stereocenters() if element_type == 'Tetracoordinate' and element_symbol == 'C']
+
+        # print(len(configurations), configurations)
+        # print(self.get_configuration_order())
+        # print(len(raw_stereocenters), raw_stereocenters)
+        # print(self.get_stereocenters())
 
         if len(configurations) != len(raw_stereocenters):
             return 'racemate'
@@ -333,7 +345,6 @@ class Compound(object):
         agcd = self.cdk.qsar.descriptors.molecular.AcidicGroupCountDescriptor()
         agcd.initialise(self.cdk.DefaultChemObjectBuilder.getInstance())
         return agcd.calculate(self.mol_container).getValue().toString()
-
 
     def get_mol2(self, filename=''):
         """
