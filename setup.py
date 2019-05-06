@@ -1,16 +1,21 @@
-import os
+import platform
 from setuptools import setup, find_packages
 from subprocess import check_output
 import subprocess
 import py4j
 import os
+import wget
 
 py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
 py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
+if platform.system() == 'Windows':
+    py4j_path = os.path.join(*py4j.__path__[0].split('\\')[:-3])
+    py4j_jar_path = os.path.join(py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
+
 cdk_version = 'cdk-2.2'
-cdk_jar_path = './cdk_pywrapper/cdk/'
-cdk_jar = cdk_jar_path + cdk_version + '.jar'
+cdk_jar_path = os.path.join('.', 'cdk_pywrapper', 'cdk')
+cdk_jar = os.path.join(cdk_jar_path, cdk_version + '.jar')
 
 MAJOR_VERSION = 0
 MINOR_VERSION = 0
@@ -18,8 +23,11 @@ MICRO_VERSION = 1
 
 REPO_URL = 'https://github.com/sebotic/cdk_pywrapper'
 
-subprocess.check_call(["wget https://github.com/cdk/cdk/releases/download/{0}/{0}.jar "
-                       "--directory-prefix={1}".format(cdk_version, cdk_jar_path)], shell=True)
+# subprocess.check_call(["wget https://github.com/cdk/cdk/releases/download/{0}/{0}.jar "
+#                        "--directory-prefix={1}".format(cdk_version, cdk_jar_path)], shell=True)
+
+fn = wget.download('https://github.com/cdk/cdk/releases/download/{0}/{0}.jar'.format(cdk_version), out=cdk_jar_path)
+print('successfully downloaded', fn)
 
 subprocess.check_call(["javac -cp '{}:{}' ./cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
                                                                                       cdk_jar)], shell=True)

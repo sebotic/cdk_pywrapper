@@ -5,6 +5,7 @@ import os
 import atexit
 import platform
 import copy
+import psutil
 
 import py4j
 from py4j.java_gateway import JavaGateway, GatewayParameters
@@ -37,6 +38,12 @@ elif host_os == 'Linux':
     ps_path = '/usr/bin/ps'
     java_path = '/usr/bin/java'
     grep_path = '/usr/bin/grep'
+elif host_os == 'Windows':
+    cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('\\')[:-3])
+    cdk_jar_path = os.path.join('\\', cdk_path, 'share', 'cdk')
+
+    py4j_path = os.path.join(*py4j.__path__[0].split('\\')[:-3])
+    py4j_jar_path = os.path.join('\\', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
@@ -50,12 +57,19 @@ __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
 
 server_process_running = False
-with subprocess.Popen(['{} aux | {} CDK'.format(ps_path, grep_path)], shell=True, stdout=subprocess.PIPE) as proc:
-    line = proc.stdout.read()
-    print(line)
-    if 'CDKBridge' in str(line):
-        print('process running')
+# with subprocess.Popen(['{} aux | {} CDK'.format(ps_path, grep_path)], shell=True, stdout=subprocess.PIPE) as proc:
+#     line = proc.stdout.read()
+#     print(line)
+#     if 'CDKBridge' in str(line):
+#         print('process running')
+#         server_process_running = True
+
+for proc in psutil.process_iter():
+    pinfo = proc.as_dict(attrs=['pid', 'name', 'username', 'cmdline'])
+    if 'cmdline' in pinfo and pinfo['cmdline'] and 'CDKBridge' in pinfo['cmdline']:
         server_process_running = True
+        print('Server process already running:', server_process_running)
+
 
 # if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
 if not server_process_running:
