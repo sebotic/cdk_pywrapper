@@ -23,6 +23,8 @@ ps_path = 'ps'
 java_path = 'java'
 grep_path = 'grep'
 
+cp_sep = ':'
+
 if host_os == 'Darwin':
     cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('/')[:-4])
     cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
@@ -44,17 +46,25 @@ elif host_os == 'Linux':
     java_path = '/usr/bin/java'
     grep_path = '/usr/bin/grep'
 elif host_os == 'Windows':
-    cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('\\')[:-3])
-    cdk_jar_path = os.path.join('\\', cdk_path, 'share', 'cdk')
+    cp_sep = ';'
+    drive, path = os.path.splitdrive(cdk_pywrapper.__path__[0])
+    cdk_path = os.path.join(drive + '\\', *path.split('\\')[:-3])
+    cdk_jar_path = os.path.join(cdk_path, 'share', 'cdk')
 
-    py4j_path = os.path.join(*py4j.__path__[0].split('\\')[:-3])
-    py4j_jar_path = os.path.join('\\', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
+    drive, path = os.path.splitdrive(py4j.__path__[0])
+    py4j_path = os.path.join(drive + '\\', *path.split('\\')[:-3])
+    py4j_jar_path = os.path.join(py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
+
+    print(cdk_path)
+    print(cdk_jar_path)
+    print(py4j_path)
+    print(py4j_jar_path)
 
 # from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 
 # set dev classpaths
 if not __debug__:
-    cdk_jar_path = './cdk'
+    cdk_jar_path = os.path.join('.', 'cdk')
 
 __author__ = 'Sebastian Burgstaller-Muehlbacher'
 __license__ = 'AGPLv3'
@@ -85,9 +95,20 @@ if not server_process_running:
     # subprocess.check_call(["javac -cp '{}:{}' ../cdk_pywrapper/cdk/cdk_bridge.java".format(py4j_jar_path,
     #                                                              '../cdk_pywrapper/cdk/cdk-2.1.1.jar')], shell=True)
     # # print('compiled sucessfully')
-    p = subprocess.Popen(["{} -cp '{}:{}:{}/' CDKBridge".format(java_path, py4j_jar_path,
-                                                                        os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
-                                                                        cdk_jar_path)], shell=True)
+    print('starting server process')
+    # p = subprocess.Popen(['{} -cp {};{};{}\\ CDKBridge'.format(java_path, py4j_jar_path,
+    #                                                                     os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+    #                                                                     cdk_jar_path)], shell=True)
+
+    p = subprocess.Popen([java_path,
+                          '-cp',
+                          '{}{}{}{}{}\\'.format(py4j_jar_path,
+                                                cp_sep,
+                                                os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                cp_sep,
+                                                cdk_jar_path),
+                          'CDKBridge'],
+                         shell=True)
 
     # wait 5 sec to start up JVM and server
     time.sleep(5)
