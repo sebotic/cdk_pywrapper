@@ -6,42 +6,51 @@ import py4j
 import os
 import wget
 
-if platform.system() == 'Linux' or platform.system() == 'Darwin':
+host_os = platform.system()
+
+cdk_version = 'cdk-2.2'
+cdk_jar_path = os.path.join('.', 'cdk_pywrapper', 'cdk')
+cdk_jar = os.path.join(cdk_jar_path, cdk_version + '.jar')
+
+fn = wget.download('https://github.com/cdk/cdk/releases/download/{0}/{0}.jar'.format(cdk_version), out=cdk_jar_path)
+print('successfully downloaded', fn)
+
+if host_os == 'Linux' or host_os == 'Darwin':
     py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
     py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
     cp_sep = ':'
 
-if platform.system() == 'Windows':
+    subprocess.check_call([
+        'javac ' +
+        ' -cp ' +
+        ' {}{}{} '.format(py4j_jar_path,
+                          cp_sep,
+                          cdk_jar) +
+        os.path.join('.', 'cdk_pywrapper', 'cdk', 'cdk_bridge.java')
+    ],
+        shell=True)
+
+if host_os == 'Windows':
     cp_sep = ';'
     drive, path = os.path.splitdrive(py4j.__path__[0])
     py4j_path = os.path.join(drive + '\\', *path.split('\\')[:-3])
     py4j_jar_path = os.path.join(py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
-cdk_version = 'cdk-2.2'
-cdk_jar_path = os.path.join('.', 'cdk_pywrapper', 'cdk')
-cdk_jar = os.path.join(cdk_jar_path, cdk_version + '.jar')
+    subprocess.check_call([
+        'javac',
+        '-cp',
+        '{}{}{}'.format(py4j_jar_path,
+                        cp_sep,
+                        cdk_jar),
+        os.path.join('.', 'cdk_pywrapper', 'cdk', 'cdk_bridge.java')
+    ],
+        shell=True)
 
 MAJOR_VERSION = 0
 MINOR_VERSION = 0
 MICRO_VERSION = 1
 
 REPO_URL = 'https://github.com/sebotic/cdk_pywrapper'
-
-# subprocess.check_call(["wget https://github.com/cdk/cdk/releases/download/{0}/{0}.jar "
-#                        "--directory-prefix={1}".format(cdk_version, cdk_jar_path)], shell=True)
-
-fn = wget.download('https://github.com/cdk/cdk/releases/download/{0}/{0}.jar'.format(cdk_version), out=cdk_jar_path)
-print('successfully downloaded', fn)
-
-subprocess.check_call([
-    'javac',
-    '-cp',
-    '{}{}{}'.format(py4j_jar_path,
-                    cp_sep,
-                    cdk_jar),
-    os.path.join('.', 'cdk_pywrapper', 'cdk', 'cdk_bridge.java')
-],
-    shell=True)
 
 setup(
     name='cdk_pywrapper',
