@@ -15,13 +15,6 @@ from py4j.protocol import Py4JJavaError
 # import cdk_pywrapper.config as config
 import cdk_pywrapper
 print(cdk_pywrapper.__path__)
-from cdk_pywrapper.config import py4j_path, cdk_path
-
-cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('/')[:-4])
-cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
-
-py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
-py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
 
 # make sure host paths are set correctly,
 # TODO: test if this can reasonably be replace by finding full path using 'which' shell command
@@ -31,10 +24,22 @@ java_path = 'java'
 grep_path = 'grep'
 
 if host_os == 'Darwin':
+    cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('/')[:-4])
+    cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
+
+    py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
+    py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
+
     ps_path = '/bin/ps'
     java_path = '/usr/bin/java'
     grep_path = '/usr/bin/grep'
 elif host_os == 'Linux':
+    cdk_path = os.path.join(*cdk_pywrapper.__path__[0].split('/')[:-4])
+    cdk_jar_path = os.path.join('/', cdk_path, 'share', 'cdk')
+
+    py4j_path = os.path.join(*py4j.__path__[0].split('/')[:-4])
+    py4j_jar_path = os.path.join('/', py4j_path, 'share', 'py4j', 'py4j' + py4j.__version__ + '.jar')
+
     ps_path = '/usr/bin/ps'
     java_path = '/usr/bin/java'
     grep_path = '/usr/bin/grep'
