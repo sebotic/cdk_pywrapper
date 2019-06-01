@@ -100,15 +100,25 @@ if not server_process_running:
     #                                                                     os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
     #                                                                     cdk_jar_path)], shell=True)
 
-    p = subprocess.Popen([java_path,
-                          '-cp',
-                          '{}{}{}{}{}\\'.format(py4j_jar_path,
-                                                cp_sep,
-                                                os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
-                                                cp_sep,
-                                                cdk_jar_path),
-                          'CDKBridge'],
-                         shell=True)
+    if host_os == 'Linux' or host_os == 'Darwin':
+        p = subprocess.Popen([java_path +
+                              ' -cp ' +
+                              ' {}:{}:{} '.format(py4j_jar_path,
+                                                  os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                  cdk_jar_path) +
+                              ' CDKBridge'],
+                             shell=True)
+
+    elif host_os == 'Windows':
+        p = subprocess.Popen([java_path,
+                              '-cp',
+                              '{}{}{}{}{}\\'.format(py4j_jar_path,
+                                                    cp_sep,
+                                                    os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                    cp_sep,
+                                                    cdk_jar_path),
+                              'CDKBridge'],
+                             shell=True)
 
     # wait 5 sec to start up JVM and server
     time.sleep(5)
@@ -141,9 +151,14 @@ def cleanup_gateway():
 
 
 def search_substructure(pattern, molecules):
-    g = JavaGateway.launch_gateway(classpath="{}:{}:{}/".format(py4j_jar_path,
-                                                                os.path.join(cdk_jar_path, 'cdk-2.1.1.jar'),
-                                                                cdk_jar_path), java_path=java_path)
+    if host_os == 'Linux' or host_os == 'Darwin':
+        g = JavaGateway.launch_gateway(classpath="{}:{}:{}/".format(py4j_jar_path,
+                                                                    os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                                    cdk_jar_path), java_path=java_path)
+    elif host_os == 'Windows':
+        g = JavaGateway.launch_gateway(classpath="{};{};{}\\".format(py4j_jar_path,
+                                                                     os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                                     cdk_jar_path), java_path='java')
 
     # search_handler = g.jvm.SearchHandler(MapConverter().convert(molecules, g._gateway_client))
     search_handler = g.jvm.SearchHandler()
