@@ -1,37 +1,47 @@
 ## Python Wrapper for the Chemistry Development kit
 
 ### tl;dr
-* A Python wrapper for the CDK (which is written in Java)
+* A Python wrapper for the Chemistry Development Kit (CDK), which is written in Java
 * Primary purpose: 
-  * Generate diverse chemical compound identifiers (SMILES, InChI)
-  * Inter-convert between these identifiers
-* Fully compatible to Python 3.x
+  * Generate diverse chemical compound identifiers (SMILES, InChI).
+  * Inter-convert between these identifiers.
+  * Integration with chem
+* Fully compatible with Python 3.x.
 
 ### Motivation
-The chemistry world only has a small number of open tools, e.g. [OpenBabel](http://openbabel.org) and the 
-[Chemistry Development Kit](cdk.sourceforge.net) ([github](https://github.com/cdk)). 
+Cheminformatics only has a small number of open source tools, e.g. [OpenBabel](http://openbabel.org), the 
+[Chemistry Development Kit](https://github.com/cdk) and [RDKit](https://www.rdkit.org/).
 
-I have been using OpenBabel for some time now, and it is a great tool offering many options,
-I found several issues which make it hard to use:
-* Generating InChI (keys) from SMILES often either does not work or struggles with stereochemistry.
-* InChI cannot be used as input format.
+Every framework has its pros and cons, e.g. OpenBabel has issues with InChI generation from SMILES.
+
+CDK lacks the ability to be used with Python, while Python has become the indispensable programming language for data science, also in cheminformatics and computational biology.
+
+Also, all three frameworks lack integration with databases.
 
 ### Installation
 
+Before installing cdk_pywrapper, make sure to have a Java JDK available on your system, e.g. [OpenJDK](https://openjdk.org/).
+
+Then, you can install from the repository directly.
+
 ```bash
+# Create Python virtual environment named 'cdk_pywrapper'
+python3 -m venv ./cdk_pywrapper
+source ./cdk_pywrapper/bin/activate
+
+# Clone repository from GitHub
 git clone https://github.com/sebotic/cdk_pywrapper.git
 cd cdk_pywrapper
 
+# Install into created venv
 pip install .
 
 ```
 
-This will install the package on your local system, it will download the CDK and it will build the cdk_bridge.java.
+This will install the package on your local system. Setuptools will take care of downloading the CDK.jar and it will build the cdk_bridge.java.
 So after that, cdk_pywrapper should be ready to use, like in the example below.
 
-Don't forget to use e.g. sudo for global installation or pip3 for Python 3.
-
-I will also host this on pypi soon, so no repo cloning will be required. I have tested it on Linux and MacOS, not sure if it would work on Windows.
+cdk_pywrapper was tested on Linux and MacOS, but it should also work on Windows.
 
 ### Example
 

@@ -1,0 +1,38 @@
+[build-system]
+requires = [
+    "setuptools>=42", 
+    "wheel",
+    "wget",
+    "py4j"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdk_pywrapper"
+version = "0.0.2"
+description = "Python wrapper for the CDK (Chemistry Development Kit)"
+authors = [
+    { name = "Sebastian Burgstaller-Muehlbacher", email = "sburgs@scripps.edu" }
+]
+license = { text = "AGPLv3" }
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["chemistry", "CDK", "Chemistry Development Kit"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Intended Audience :: Science/Research",
+    "Topic :: Utilities",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+dependencies = [
+    "py4j",
+    "wget"
+]
+
+[project.urls]
+Homepage = "https://github.com/sebotic/cdk_pywrapper"

@@ -80,10 +80,28 @@ server_process_running = False
 #         server_process_running = True
 
 for proc in psutil.process_iter():
-    pinfo = proc.as_dict(attrs=['pid', 'name', 'username', 'cmdline'])
-    if 'cmdline' in pinfo and pinfo['cmdline'] and 'CDKBridge' in pinfo['cmdline']:
-        server_process_running = True
-        print('Server process already running:', server_process_running)
+    try:
+        pinfo = proc.as_dict(attrs=['pid', 'name', 'username', 'cmdline'])
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+        # process terminated or info not accessible; skip it
+        continue
+
+    cmdline = pinfo.get('cmdline')
+    # cmdline can be None, a list/tuple or a string depending on platform/psutil version
+    if cmdline:
+        try:
+            if isinstance(cmdline, (list, tuple)):
+                cmdline_str = ' '.join(map(str, cmdline))
+            else:
+                cmdline_str = str(cmdline)
+        except Exception:
+            # defensive fallback
+            continue
+
+        if 'CDKBridge' in cmdline_str:
+            server_process_running = True
+            print('Server process already running:', server_process_running)
+            break
 
 
 # if not any([True if 'CDKBridge' in p.cmdline() else False for p in psutil.process_iter()]):
@@ -104,7 +122,7 @@ if not server_process_running:
         p = subprocess.Popen([java_path +
                               ' -cp ' +
                               ' {}:{}:{} '.format(py4j_jar_path,
-                                                  os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                  os.path.join(cdk_jar_path, 'cdk-2.11.jar'),
                                                   cdk_jar_path) +
                               ' CDKBridge'],
                              shell=True)
@@ -114,7 +132,7 @@ if not server_process_running:
                               '-cp',
                               '{}{}{}{}{}\\'.format(py4j_jar_path,
                                                     cp_sep,
-                                                    os.path.join(cdk_jar_path, 'cdk-2.2.jar'),
+                                                    os.path.join(cdk_jar_path, 'cdk-2.11.jar'),
                                                     cp_sep,
                                                     cdk_jar_path),
                               'CDKBridge'],
@@ -174,7 +192,7 @@ def search_substructure(pattern, molecules):
 
 class Compound(object):
     def __init__(self, compound_string, identifier_type, suppress_hydrogens=False, add_explicit_hydrogens=False):
-        allowed_types = ['smiles', 'inchi', 'atom_container']
+        allowed_types = ['smiles', 'inchi', 'atom_container', 'MDLV2000', 'MDLV3000']
         assert(identifier_type in allowed_types)
 
         self.cdk = gateway.jvm.org.openscience.cdk
@@ -187,7 +205,19 @@ class Compound(object):
         if self.identifier_type not in allowed_types:
             raise ValueError('Not a valid identifier type')
         try:
-            if identifier_type == 'atom_container':
+            if identifier_type.startswith('MDLV'):
+                reader = self.java.io.StringReader(compound_string)
+                # TODO: implement file reading option
+                # reader = self.java.io.FileReader('37410.mol')
+                if identifier_type == 'MDLV2000':
+                    molfile_reader = self.cdk.io.MDLV2000Reader(reader)
+                else:
+                    molfile_reader = self.cdk.io.MDLV3000Reader(reader)
+
+                self.mol_container = molfile_reader.read(self.cdk.AtomContainer(0, 0, 0, 0))
+                molfile_reader.close()
+
+            elif identifier_type == 'atom_container':
                 self.compound_string = compound_string
                 self.mol_container = self.compound_string
             else:
@@ -201,16 +231,17 @@ class Compound(object):
                     smiles_parser = self.cdk.smiles.SmilesParser(builder)
                     self.mol_container = smiles_parser.parseSmiles(self.compound_string)
 
-                if suppress_hydrogens:
-                    self.mol_container = self.cdk.tools.manipulator.AtomContainerManipulator.copyAndSuppressedHydrogens(
-                        self.mol_container)
+            if suppress_hydrogens:
+                self.mol_container = self.cdk.tools.manipulator.AtomContainerManipulator.copyAndSuppressedHydrogens(
+                    self.mol_container)
 
-                if add_explicit_hydrogens:
-                    self.cdk.tools.manipulator.AtomContainerManipulator\
-                        .percieveAtomTypesAndConfigureAtoms(self.mol_container)
-                    self.cdk.tools.CDKHydrogenAdder.getInstance(builder).addImplicitHydrogens(self.mol_container)
-                    self.cdk.tools.manipulator.AtomContainerManipulator\
-                        .convertImplicitToExplicitHydrogens(self.mol_container)
+            if add_explicit_hydrogens:
+                builder = self.cdk.DefaultChemObjectBuilder.getInstance()
+                self.cdk.tools.manipulator.AtomContainerManipulator\
+                    .percieveAtomTypesAndConfigureAtoms(self.mol_container)
+                self.cdk.tools.CDKHydrogenAdder.getInstance(builder).addImplicitHydrogens(self.mol_container)
+                self.cdk.tools.manipulator.AtomContainerManipulator\
+                    .convertImplicitToExplicitHydrogens(self.mol_container)
 
         except Py4JJavaError as e:
             print(e)
@@ -250,14 +281,16 @@ class Compound(object):
         return gen.getInchi()
 
     def get_tautomers(self):
-        tautomer_generator = self.cdk.tautomers.InChITautomerGenerator()
+        tautomer_generator = self.cdk.tautomers.InChITautomerGenerator(
+             self.cdk.tautomers.InChITautomerGenerator.KETO_ENOL | self.cdk.tautomers.InChITautomerGenerator.ONE_FIVE_SHIFT)
+        self.cdk.aromaticity.Kekulization.kekulize(self.mol_container)
         tautomers = tautomer_generator.getTautomers(self.mol_container)
         # py4j.java_collections.JavaList('o16', gateway)
         # mol1 = tautomers[0]
-        t_obj = [Compound(compound_string=x, identifier_type='atom_container') for x in tautomers]
-        print([t.get_inchi_key() for t in t_obj])
-        print(*[t.get_inchi() for t in t_obj], sep='\n')
-        print(*[t.get_smiles() for t in t_obj], sep='\n')
+        # t_obj = [Compound(compound_string=x, identifier_type='atom_container') for x in tautomers]
+        # print([t.get_inchi_key() for t in t_obj])
+        # print(*[t.get_inchi() for t in t_obj], sep='\n')
+        # print(*[t.get_smiles() for t in t_obj], sep='\n')
         return list(tautomers)
 
     def get_stereocenters(self):
