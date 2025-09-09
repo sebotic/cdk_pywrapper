@@ -94,16 +94,20 @@ For using the MCP server, add this configuration to your respective LLM MCP conf
 ```
 
 ### Example prompts for using the MCP tools:
+
+## Example 1:
 ```
 Search for structure of compound vemurafenib.
 ```
 Will return SMILES, InchI and Inchi key for vemurafenib.
 
-
+## Example 2:
 ```
 Get details for compound vemurafenib.
 ```
 Will return synonyms and compound structure.
+
+## Example 3:
 
 ```
 Get inchi for CCOH
@@ -111,6 +115,8 @@ Get inchi for CCOH
 Will return the InChI for Ethanol, which is InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3
 
 This conversion works for any valid SMILES string and can also return the InChI key.
+
+## Example 4:
 
 ```
 Get the compound names for this smiles CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC
