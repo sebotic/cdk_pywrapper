@@ -57,3 +57,62 @@ print(ikey)
 Output: 'MNQDKWZEUULFPX-UHFFFAOYSA-M'
 
 
+## MCP server
+I also added a MCP server now which makes use of the functions of cdk_pywrapper and also integrates with UNII, Chembl and Guide to Pharmacology data.
+
+It requires a LLM capable of tool use.
+
+Key features:
+* Allows a LLM to search for a compound by name.
+* Allows a LLM to get the corresponding SMILES string.
+* Allows a LLM to get the name associated with a structure (SMILES or InChI, will lookup Chembl).
+* Allows for convertions between SMILES and InChI and also InChI key.
+* Allows for calculation of basic compound properties (e.g. molecular mass).
+* Allows for creation of an SVG of the compound structure.
+
+### Installation of the MCP
+Most conveniently, one would install it locally as a tool, using the [uv package manager](https://docs.astral.sh/uv/).
+Install uv first, according to it's instructions, then run from the repo root:
+
+```bash
+uv tool install . --force-reinstall
+```
+
+For using the MCP server, add this configuration to your respective LLM MCP configuration.
+```json
+  "cdk_pywrapper-mcp-server": {
+    "command": "uv",
+    "args": [
+      "tool",
+      "run",
+      "--from",
+      "cdk-pywrapper",
+      "cdk_pywrapper-mcp-server"
+    ],
+    "env": {}
+  }
+```
+
+### Example prompts for using the MCP tools:
+```
+Search for structure of compound vemurafenib.
+```
+Will return SMILES, InchI and Inchi key for vemurafenib.
+
+
+```
+Get details for compound vemurafenib.
+```
+Will return synonyms and compound structure.
+
+```
+Get inchi for CCOH
+```
+Will return the InChI for Ethanol, which is InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3
+
+This conversion works for any valid SMILES string and can also return the InChI key.
+
+```
+Get the compound names for this smiles CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC
+```
+That should return [Omeprazole](https://www.wikidata.org/wiki/Q422210). Use a modern thinking model like Google Gemini 2.5. Gemini will figure out on its own that it first needs to convert the SMILES to an InChI key and then use the Chembl tool to get the name. 

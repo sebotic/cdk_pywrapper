@@ -1,3 +1,9 @@
 py4j
 psutil
 wget
+fastmcp
+requests
+pandas
+numpy
+wikidataintegrator
+chemspipy

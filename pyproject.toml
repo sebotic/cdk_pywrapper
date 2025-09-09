@@ -16,7 +16,7 @@ authors = [
 ]
 license = { text = "AGPLv3" }
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["chemistry", "CDK", "Chemistry Development Kit"]
 classifiers = [
     "Programming Language :: Python",
@@ -31,8 +31,18 @@ classifiers = [
 ]
 dependencies = [
     "py4j",
-    "wget"
+    "wget",
+    "fastmcp",
+    "psutil",
+    "requests",
+    "pandas",
+    "numpy",
+    "wikidataintegrator",
+    "chemspipy"
 ]
 
 [project.urls]
 Homepage = "https://github.com/sebotic/cdk_pywrapper"
+
+[project.scripts]
+cdk_pywrapper-mcp-server = "cdk_pywrapper.cdk_pywrapper_mcp_server:main"

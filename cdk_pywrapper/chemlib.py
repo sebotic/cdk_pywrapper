@@ -1,10 +1,11 @@
 import requests
 import sys
-import simplejson
+import json
 import time
 import re
-import wikidataintegrator.wdi_core as wdi_core
-import wikidataintegrator.wdi_login as wdi_login
+import importlib.resources
+# import wikidataintegrator.wdi_core as wdi_core
+# import wikidataintegrator.wdi_login as wdi_login
 import pprint
 import pandas as pd
 import numpy as np
@@ -24,14 +25,20 @@ __copyright__ = 'Sebastian Burgstaller-Muehlbacher'
 
 
 class UNIIMolecule(object):
-    unii_data = pd.read_csv('./unii_data/unii_data_ndfrt.csv', low_memory=False, index_col=0,
+    # with importlib.resources.open_text("cdk_pywrapper.data", "UNII_Records_18Aug2025.txt") as f:
+    # data = f.read()
+
+    # load UNII data. Can be downloaded from https://precision.fda.gov/uniisearch/archive/latest/UNII_Data.zip
+    # TODO: update regularly/dynamically.
+    data = str(importlib.resources.files('cdk_pywrapper.data').joinpath("UNII_Records_18Aug2025.txt"))
+    unii_data = pd.read_csv(data, low_memory=False, index_col=0, sep='\t',
                                dtype={
-                                   'UNII': np.str,
-                                   'RXCUI': np.str,
-                                   'INN_ID': np.str,
-                                   'ITIS': np.str,
-                                   'NCBI': np.str,
-                                   'RxNorm_CUI': np.str,  # same as RXCUI, but from NDF-RT
+                                   'UNII': 'str',
+                                   'RXCUI': 'str',
+                                   'INN_ID': 'str',
+                                   'ITIS': 'str',
+                                   'NCBI': 'str',
+                                   'RxNorm_CUI': 'str',  # same as RXCUI, but from NDF-RT
                                })
 
     for count, row in unii_data.iterrows():
@@ -44,7 +51,8 @@ class UNIIMolecule(object):
             if count % 10000 == 0:
                 print('processed to UNII ID', count)
 
-    unii_data.to_csv('./unii_data/unii_data_ndfrt.csv')
+    # base_path = str(importlib.resources.files('cdk_pywrapper.data'))    
+    # unii_data.to_csv(os.path.join(base_path, 'unii_data_ndfrt.csv'))
 
     def __init__(self, unii=None, inchi_key=None):
 
@@ -250,386 +258,394 @@ class UNIIMolecule(object):
         return ''.join(splits)
 
 
-class DrugBankMolecule(object):
-    """DrugBank ID, Accession Numbers, Common name, CAS, UNII, Synonyms, Standard InChI Key"""
-
-    drugbank_data = pd.read_csv('drugbank vocabulary.csv', low_memory=False)
-    drugbank_data = pd.concat([drugbank_data.drop_duplicates(subset=['Standard InChI Key'], keep='first'),
-                               drugbank_data.loc[drugbank_data['Standard InChI Key'].isnull(), :]])
-
-
-    def __init__(self, db=None, inchi_key=None):
-
-        print('unii inchi key', inchi_key)
-        if db:
-            ind = DrugBankMolecule.drugbank_data['DrugBank ID'].values == db
-        else:
-            ind = DrugBankMolecule.drugbank_data['Standard InChI Key'].values == inchi_key
-
-
-        self.data = DrugBankMolecule.drugbank_data.loc[ind, :]
-
-        if len(self.data.index) != 1:
-            raise ValueError('Provided ID did not return a unique DrugBank ID')
-
-        self.data_index = self.data.index[0]
-
-    @property
-    def stdinchikey(self):
-        ikey = self.data.loc[self.data_index, 'Standard InChI Key']
-        if pd.isnull(ikey):
-            return None
-
-        return ikey
-
-    @property
-    def stdinchi(self):
-        # CC0 data does not provide InChI, instead could create a PubChemMolecule using the InChI key provided and use that
-        return None
-
-    @property
-    def preferred_name(self):
-        name = self.data.loc[self.data_index, 'Common name']
-        return name if pd.notnull(name) else None
-
-    @property
-    def synonyms(self):
-        synonyms = self.data.loc[self.data_index, 'Synonyms']
-        return synonyms.split(' | ') if pd.notnull(synonyms) else []
-
-    @property
-    def smiles(self):
-        # same applies as for InChIs
-        return None
-
-    @property
-    def molecule_type(self):
-        # return either 'approved', 'experimental', 'retracted', 'biotech', 'antibody'. Based on what the accession numbers say
-        return None
-
-    @property
-    def accession_numbers(self):
-        acc_nrs = self.data.loc[self.data_index, 'Accession Numbers'].split('|')
-        return acc_nrs
-
-    @property
-    def unii(self):
-        unii = self.data.loc[self.data_index, 'UNII']
-        return unii if pd.notnull(unii) else None
-
-    @property
-    def cas(self):
-        cas = self.data.loc[self.data_index, 'CAS']
-        return cas if pd.notnull(cas) else None
-
-    @property
-    def drugbank(self):
-        return self.data.loc[self.data_index, 'DrugBank ID'][2:]
-
-    def to_wikidata(self):
-        item_label = self.preferred_name if self.preferred_name else 'DB' + self.drugbank
-
-        refs = [[
-            wdi_core.WDItemID(value='Q1122544', prop_nr='P248', is_reference=True),  # stated in
-            wdi_core.WDExternalID(value=self.drugbank, prop_nr='P715', is_reference=True),  # source element
-            wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
-            wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
-            wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
-        ]]
-        print('DrugBank Main label is', item_label)
-
-        # cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
-        # isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
-        # canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
-
-        elements = {
-            'P652': self.unii,
-            'P715': self.drugbank,
-            #'P233': canonical_smiles,
-            #'P2017': isomeric_smiles,
-            #'P235': self.stdinchikey,
-            #'P234': self.stdinchi[6:],
-            'P231': self.cas,
-        }
-
-        dtypes = {
-            'P652': wdi_core.WDExternalID,
-            'P715': wdi_core.WDExternalID,
-            'P683': wdi_core.WDExternalID,
-            'P661': wdi_core.WDExternalID,
-            'P2153': wdi_core.WDExternalID,
-            'P233': wdi_core.WDString,
-            'P2017': wdi_core.WDString,
-            'P235': wdi_core.WDExternalID,
-            'P234': wdi_core.WDExternalID,
-            'P274': wdi_core.WDString,
-            'P231': wdi_core.WDExternalID,
-            'P232': wdi_core.WDExternalID
-        }
-
-        # # do not add isomeric smiles if no isomeric info is available
-        # if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
-        #     del elements['P2017']
-        #
-        # # do not try to add InChI longer than 400 chars
-        # if len(self.stdinchi[6:]) > 400:
-        #     del elements['P234']
-        #
-        # if len(self.smiles) > 400:
-        #     del elements['P233']
-
-        data = []
-
-        for k, v in elements.items():
-            if not v:
-                continue
-
-            print('{}:'.format(k), v)
-            if isinstance(v, list) or isinstance(v, set):
-                for x in v:
-                    data.append(dtypes[k](prop_nr=k, value=x, references=refs))
-            else:
-                data.append(dtypes[k](prop_nr=k, value=v, references=refs))
-
-        return data
-
-
-class ChEBIMolecule(object):
-    chebi_data_path = './chebi_data/'
-    chebi_data = pd.read_csv(os.path.join(chebi_data_path, 'chebiId_inchi.tsv'), low_memory=False, index_col=0, sep='\t')
-
-    'ID	COMPOUND_ID	TYPE	SOURCE	NAME	ADAPTED	LANGUAGE'
-    chebi_names = pd.read_csv(os.path.join(chebi_data_path, 'names.tsv'), low_memory=False, index_col=None, sep='\t',
-                             dtype={'ID': np.str, 'COMPOUND_ID': np.str}, na_filter=False)
-
-    zwitterion_id_list = set()
-    for zz in chebi_names.iterrows():
-        data = zz[1]
-        if 'zwitterion' in data['NAME']:
-            zwitterion_id_list.add(np.int64(data['COMPOUND_ID']))
-
-    compounds = pd.read_csv(os.path.join(chebi_data_path, 'compounds.tsv'), low_memory=False, index_col=0, sep='\t')
-
-    for c, zz in compounds.iterrows():
-        # pd.NaN is handled as a float datatype so it needs extra treatment, what a nonsense.
-        if pd.isnull(zz['NAME']):
-            zwitterion_id_list.add(c)
-            continue
-        if 'zwitterion' in zz['NAME']:
-            zwitterion_id_list.add(c)
-
-    chebi_data = chebi_data.drop(list(zwitterion_id_list))
-
-    if 'InChI key' not in chebi_data:
-        print('Generating InChI keys ...')
-        for row in chebi_data.iterrows():
-            index = row[0]
-            data = row[1]
-
-            inchi = data['InChI']
-            cmpnd = Compound(compound_string=inchi, identifier_type='inchi')
-            chebi_data.loc[index, 'InChI key'] = cmpnd.get_inchi_key()
-
-            if index % 1000 == 0:
-                print('processed to ChEBI ID', index)
-
-        chebi_data.to_csv(os.path.join(chebi_data_path, 'chebiId_inchi.tsv'), sep='\t')
-
-
-    'ID	COMPOUND_ID	SOURCE	TYPE	ACCESSION_NUMBER'
-    db_accessions = pd.read_csv(os.path.join(chebi_data_path, 'database_accession.tsv'), low_memory=False, index_col=None, sep='\t',
-                                dtype={'ID': np.str, 'COMPOUND_ID': np.str}, na_filter=False)
-
-    # remove CAS numbers provided by KEGG, as they are frequently incorrect
-    db_accessions = db_accessions.loc[~(db_accessions['SOURCE'].isin(['KEGG COMPOUND']) &
-                                      db_accessions['TYPE'].isin(['CAS Registry Number'])), :]
-
-    def __init__(self, chebi_id=None, inchi_key=None):
-
-        if chebi_id:
-            ind = ChEBIMolecule.chebi_data.index == np.int64(chebi_id)
-        else:
-            ind = ChEBIMolecule.chebi_data['InChI key'].values == inchi_key
-
-        self._canonical_smiles = None
-        self._isomeric_smiles = None
-
-        self.data = ChEBIMolecule.chebi_data.loc[ind, :]
-
-        if len(self.data.index) != 1:
-            raise ValueError('No unique found for ChEBI ID')
-
-        self.data_index = self.data.index[0]
-
-        self.all_names = ChEBIMolecule.chebi_names.loc[ChEBIMolecule.chebi_names['COMPOUND_ID'] == self.chebi, :]
-        self.accessions = ChEBIMolecule.db_accessions.loc[ChEBIMolecule.db_accessions['COMPOUND_ID'] == self.chebi, :]
-        self.chebi_base_data = ChEBIMolecule.compounds.loc[ChEBIMolecule.compounds.index == np.int64(self.chebi), :]
-
-    @property
-    def stdinchikey(self):
-        return self.data.loc[self.data_index, 'InChI key']
-
-    @property
-    def stdinchi(self):
-        return self.data.loc[self.data_index, 'InChI']
-
-    @property
-    def preferred_name(self):
-        pref_names = [x[1]['NAME'] for x in self.chebi_base_data
-                                                .loc[self.chebi_base_data.index == np.int64(self.chebi), :].iterrows()]
-        return pref_names[0] if len(pref_names) > 0 else None
-
-    @property
-    def synonyms(self):
-        return [x[1]['NAME'] for x in self.all_names.loc[self.all_names['TYPE'] == 'SYNONYM', :]
-            .iterrows() if x[1]['LANGUAGE'] == 'en']
-
-    @property
-    def canonical_smiles(self):
-        if not self._canonical_smiles:
-            cmpnd = Compound(compound_string=self.stdinchi, identifier_type='inchi')
-            self._canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
-            self._isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
-        return self._canonical_smiles
-
-    @canonical_smiles.setter
-    def canonical_smiles(self, value):
-        self._canonical_smiles = value
-
-    @property
-    def isomeric_smiles(self):
-        if not self._isomeric_smiles:
-            csmiles = self.canonical_smiles
-        return self._isomeric_smiles
-
-    @isomeric_smiles.setter
-    def isomeric_smiles(self, value):
-        self._isomeric_smiles = value
-
-    @property
-    def chebi(self):
-        return str(self.data_index)
-
-    @property
-    def cas(self):
-        return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
-            .isin(['CAS Registry Number']), :].iterrows()])
-
-    @property
-    def hmdb(self):
-        return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
-            .isin(['HMDB accession']), :].iterrows()])
-
-    @property
-    def beilstein(self):
-        return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
-            .isin(['Beilstein Registry Number', 'Reaxys Registry Number']), :].iterrows()])
-
-    @property
-    def kegg(self):
-        return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
-            .isin(['KEGG COMPOUND accession', 'KEGG DRUG accession']), :].iterrows()])
-
-    @property
-    def knapsack(self):
-        return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
-                   .isin(['KNApSAcK accession']), :].iterrows()])
-
-    @property
-    def who_inn(self):
-        return [x[1]['NAME'] for x in self.all_names.loc[self.all_names['TYPE'] == 'INN', :]
-            .iterrows() if x[1]['LANGUAGE'] == 'en']
-
-    def to_wikidata(self):
-        item_label = self.preferred_name if self.preferred_name else 'ChEBI:' + self.chebi
-
-        refs = [[
-            wdi_core.WDItemID(value='Q902623', prop_nr='P248', is_reference=True),  # stated in
-            wdi_core.WDExternalID(value=self.chebi, prop_nr='P683', is_reference=True),  # source element
-            wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
-            wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
-            wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
-        ]]
-        print('ChEBI Main label is', item_label)
-
-        elements = {
-            'P683': self.chebi,
-            'P233': self.canonical_smiles,
-            'P2017': self.isomeric_smiles,
-            'P235': self.stdinchikey,
-            'P234': self.stdinchi[6:],
-            'P231': self.cas,
-            'P665': self.kegg,
-            'P2057': self.hmdb,
-            'P1579': self.beilstein,
-            'P2064': self.knapsack,
-            'P2275': self.who_inn
-        }
-
-        dtypes = {
-            'P652': wdi_core.WDExternalID,
-            'P683': wdi_core.WDExternalID,
-            'P661': wdi_core.WDExternalID,
-            'P2153': wdi_core.WDExternalID,
-            'P233': wdi_core.WDString,
-            'P2017': wdi_core.WDString,
-            'P235': wdi_core.WDExternalID,
-            'P234': wdi_core.WDExternalID,
-            'P274': wdi_core.WDString,
-            'P231': wdi_core.WDExternalID,
-            'P232': wdi_core.WDExternalID,
-            'P665': wdi_core.WDExternalID,
-            'P2057': wdi_core.WDExternalID,
-            'P1579': wdi_core.WDExternalID,
-            'P2064': wdi_core.WDExternalID,
-            'P2275': wdi_core.WDMonolingualText
-        }
-
-        # do not add isomeric smiles if no isomeric info is available
-        if self.canonical_smiles == self.isomeric_smiles or len(self.isomeric_smiles) > 400:
-            del elements['P2017']
-
-        # do not try to add InChI longer than 400 chars
-        if len(self.stdinchi[6:]) > 400:
-            del elements['P234']
-
-        if len(self.canonical_smiles) > 400:
-            del elements['P233']
-
-        data = []
-
-        for k, v in elements.items():
-            if not v:
-                continue
-
-            print('{}:'.format(k), v)
-            if isinstance(v, list) or isinstance(v, set):
-                for x in v:
-                    data.append(dtypes[k](prop_nr=k, value=x, references=refs))
-            else:
-                data.append(dtypes[k](prop_nr=k, value=v, references=refs))
-
-        return data
+# class DrugBankMolecule(object):
+#     """DrugBank ID, Accession Numbers, Common name, CAS, UNII, Synonyms, Standard InChI Key"""
+
+#     drugbank_data = pd.read_csv('drugbank vocabulary.csv', low_memory=False)
+#     drugbank_data = pd.concat([drugbank_data.drop_duplicates(subset=['Standard InChI Key'], keep='first'),
+#                                drugbank_data.loc[drugbank_data['Standard InChI Key'].isnull(), :]])
+
+
+#     def __init__(self, db=None, inchi_key=None):
+
+#         print('unii inchi key', inchi_key)
+#         if db:
+#             ind = DrugBankMolecule.drugbank_data['DrugBank ID'].values == db
+#         else:
+#             ind = DrugBankMolecule.drugbank_data['Standard InChI Key'].values == inchi_key
+
+
+#         self.data = DrugBankMolecule.drugbank_data.loc[ind, :]
+
+#         if len(self.data.index) != 1:
+#             raise ValueError('Provided ID did not return a unique DrugBank ID')
+
+#         self.data_index = self.data.index[0]
+
+#     @property
+#     def stdinchikey(self):
+#         ikey = self.data.loc[self.data_index, 'Standard InChI Key']
+#         if pd.isnull(ikey):
+#             return None
+
+#         return ikey
+
+#     @property
+#     def stdinchi(self):
+#         # CC0 data does not provide InChI, instead could create a PubChemMolecule using the InChI key provided and use that
+#         return None
+
+#     @property
+#     def preferred_name(self):
+#         name = self.data.loc[self.data_index, 'Common name']
+#         return name if pd.notnull(name) else None
+
+#     @property
+#     def synonyms(self):
+#         synonyms = self.data.loc[self.data_index, 'Synonyms']
+#         return synonyms.split(' | ') if pd.notnull(synonyms) else []
+
+#     @property
+#     def smiles(self):
+#         # same applies as for InChIs
+#         return None
+
+#     @property
+#     def molecule_type(self):
+#         # return either 'approved', 'experimental', 'retracted', 'biotech', 'antibody'. Based on what the accession numbers say
+#         return None
+
+#     @property
+#     def accession_numbers(self):
+#         acc_nrs = self.data.loc[self.data_index, 'Accession Numbers'].split('|')
+#         return acc_nrs
+
+#     @property
+#     def unii(self):
+#         unii = self.data.loc[self.data_index, 'UNII']
+#         return unii if pd.notnull(unii) else None
+
+#     @property
+#     def cas(self):
+#         cas = self.data.loc[self.data_index, 'CAS']
+#         return cas if pd.notnull(cas) else None
+
+#     @property
+#     def drugbank(self):
+#         return self.data.loc[self.data_index, 'DrugBank ID'][2:]
+
+#     def to_wikidata(self):
+#         item_label = self.preferred_name if self.preferred_name else 'DB' + self.drugbank
+
+#         refs = [[
+#             wdi_core.WDItemID(value='Q1122544', prop_nr='P248', is_reference=True),  # stated in
+#             wdi_core.WDExternalID(value=self.drugbank, prop_nr='P715', is_reference=True),  # source element
+#             wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
+#             wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
+#             wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
+#         ]]
+#         print('DrugBank Main label is', item_label)
+
+#         # cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
+#         # isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
+#         # canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
+
+#         elements = {
+#             'P652': self.unii,
+#             'P715': self.drugbank,
+#             #'P233': canonical_smiles,
+#             #'P2017': isomeric_smiles,
+#             #'P235': self.stdinchikey,
+#             #'P234': self.stdinchi[6:],
+#             'P231': self.cas,
+#         }
+
+#         dtypes = {
+#             'P652': wdi_core.WDExternalID,
+#             'P715': wdi_core.WDExternalID,
+#             'P683': wdi_core.WDExternalID,
+#             'P661': wdi_core.WDExternalID,
+#             'P2153': wdi_core.WDExternalID,
+#             'P233': wdi_core.WDString,
+#             'P2017': wdi_core.WDString,
+#             'P235': wdi_core.WDExternalID,
+#             'P234': wdi_core.WDExternalID,
+#             'P274': wdi_core.WDString,
+#             'P231': wdi_core.WDExternalID,
+#             'P232': wdi_core.WDExternalID
+#         }
+
+#         # # do not add isomeric smiles if no isomeric info is available
+#         # if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
+#         #     del elements['P2017']
+#         #
+#         # # do not try to add InChI longer than 400 chars
+#         # if len(self.stdinchi[6:]) > 400:
+#         #     del elements['P234']
+#         #
+#         # if len(self.smiles) > 400:
+#         #     del elements['P233']
+
+#         data = []
+
+#         for k, v in elements.items():
+#             if not v:
+#                 continue
+
+#             print('{}:'.format(k), v)
+#             if isinstance(v, list) or isinstance(v, set):
+#                 for x in v:
+#                     data.append(dtypes[k](prop_nr=k, value=x, references=refs))
+#             else:
+#                 data.append(dtypes[k](prop_nr=k, value=v, references=refs))
+
+#         return data
+
+
+# class ChEBIMolecule(object):
+#     chebi_data_path = './chebi_data/'
+#     chebi_data = pd.read_csv(os.path.join(chebi_data_path, 'chebiId_inchi.tsv'), low_memory=False, index_col=0, sep='\t')
+
+#     'ID	COMPOUND_ID	TYPE	SOURCE	NAME	ADAPTED	LANGUAGE'
+#     chebi_names = pd.read_csv(os.path.join(chebi_data_path, 'names.tsv'), low_memory=False, index_col=None, sep='\t',
+#                              dtype={'ID': 'str', 'COMPOUND_ID': 'str'}, na_filter=False)
+
+#     zwitterion_id_list = set()
+#     for zz in chebi_names.iterrows():
+#         data = zz[1]
+#         if 'zwitterion' in data['NAME']:
+#             zwitterion_id_list.add(np.int64(data['COMPOUND_ID']))
+
+#     compounds = pd.read_csv(os.path.join(chebi_data_path, 'compounds.tsv'), low_memory=False, index_col=0, sep='\t')
+
+#     for c, zz in compounds.iterrows():
+#         # pd.NaN is handled as a float datatype so it needs extra treatment, what a nonsense.
+#         if pd.isnull(zz['NAME']):
+#             zwitterion_id_list.add(c)
+#             continue
+#         if 'zwitterion' in zz['NAME']:
+#             zwitterion_id_list.add(c)
+
+#     chebi_data = chebi_data.drop(list(zwitterion_id_list))
+
+#     if 'InChI key' not in chebi_data:
+#         print('Generating InChI keys ...')
+#         for row in chebi_data.iterrows():
+#             index = row[0]
+#             data = row[1]
+
+#             inchi = data['InChI']
+#             cmpnd = Compound(compound_string=inchi, identifier_type='inchi')
+#             chebi_data.loc[index, 'InChI key'] = cmpnd.get_inchi_key()
+
+#             if index % 1000 == 0:
+#                 print('processed to ChEBI ID', index)
+
+#         chebi_data.to_csv(os.path.join(chebi_data_path, 'chebiId_inchi.tsv'), sep='\t')
+
+
+#     'ID	COMPOUND_ID	SOURCE	TYPE	ACCESSION_NUMBER'
+#     db_accessions = pd.read_csv(os.path.join(chebi_data_path, 'database_accession.tsv'), low_memory=False, index_col=None, sep='\t',
+#                                 dtype={'ID': 'str', 'COMPOUND_ID': 'str'}, na_filter=False)
+
+#     # remove CAS numbers provided by KEGG, as they are frequently incorrect
+#     db_accessions = db_accessions.loc[~(db_accessions['SOURCE'].isin(['KEGG COMPOUND']) &
+#                                       db_accessions['TYPE'].isin(['CAS Registry Number'])), :]
+
+#     def __init__(self, chebi_id=None, inchi_key=None):
+
+#         if chebi_id:
+#             ind = ChEBIMolecule.chebi_data.index == np.int64(chebi_id)
+#         else:
+#             ind = ChEBIMolecule.chebi_data['InChI key'].values == inchi_key
+
+#         self._canonical_smiles = None
+#         self._isomeric_smiles = None
+
+#         self.data = ChEBIMolecule.chebi_data.loc[ind, :]
+
+#         if len(self.data.index) != 1:
+#             raise ValueError('No unique found for ChEBI ID')
+
+#         self.data_index = self.data.index[0]
+
+#         self.all_names = ChEBIMolecule.chebi_names.loc[ChEBIMolecule.chebi_names['COMPOUND_ID'] == self.chebi, :]
+#         self.accessions = ChEBIMolecule.db_accessions.loc[ChEBIMolecule.db_accessions['COMPOUND_ID'] == self.chebi, :]
+#         self.chebi_base_data = ChEBIMolecule.compounds.loc[ChEBIMolecule.compounds.index == np.int64(self.chebi), :]
+
+#     @property
+#     def stdinchikey(self):
+#         return self.data.loc[self.data_index, 'InChI key']
+
+#     @property
+#     def stdinchi(self):
+#         return self.data.loc[self.data_index, 'InChI']
+
+#     @property
+#     def preferred_name(self):
+#         pref_names = [x[1]['NAME'] for x in self.chebi_base_data
+#                                                 .loc[self.chebi_base_data.index == np.int64(self.chebi), :].iterrows()]
+#         return pref_names[0] if len(pref_names) > 0 else None
+
+#     @property
+#     def synonyms(self):
+#         return [x[1]['NAME'] for x in self.all_names.loc[self.all_names['TYPE'] == 'SYNONYM', :]
+#             .iterrows() if x[1]['LANGUAGE'] == 'en']
+
+#     @property
+#     def canonical_smiles(self):
+#         if not self._canonical_smiles:
+#             cmpnd = Compound(compound_string=self.stdinchi, identifier_type='inchi')
+#             self._canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
+#             self._isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
+#         return self._canonical_smiles
+
+#     @canonical_smiles.setter
+#     def canonical_smiles(self, value):
+#         self._canonical_smiles = value
+
+#     @property
+#     def isomeric_smiles(self):
+#         if not self._isomeric_smiles:
+#             csmiles = self.canonical_smiles
+#         return self._isomeric_smiles
+
+#     @isomeric_smiles.setter
+#     def isomeric_smiles(self, value):
+#         self._isomeric_smiles = value
+
+#     @property
+#     def chebi(self):
+#         return str(self.data_index)
+
+#     @property
+#     def cas(self):
+#         return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
+#             .isin(['CAS Registry Number']), :].iterrows()])
+
+#     @property
+#     def hmdb(self):
+#         return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
+#             .isin(['HMDB accession']), :].iterrows()])
+
+#     @property
+#     def beilstein(self):
+#         return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
+#             .isin(['Beilstein Registry Number', 'Reaxys Registry Number']), :].iterrows()])
+
+#     @property
+#     def kegg(self):
+#         return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
+#             .isin(['KEGG COMPOUND accession', 'KEGG DRUG accession']), :].iterrows()])
+
+#     @property
+#     def knapsack(self):
+#         return set([x[1]['ACCESSION_NUMBER'] for x in self.accessions.loc[self.accessions['TYPE']
+#                    .isin(['KNApSAcK accession']), :].iterrows()])
+
+#     @property
+#     def who_inn(self):
+#         return [x[1]['NAME'] for x in self.all_names.loc[self.all_names['TYPE'] == 'INN', :]
+#             .iterrows() if x[1]['LANGUAGE'] == 'en']
+
+#     def to_wikidata(self):
+#         item_label = self.preferred_name if self.preferred_name else 'ChEBI:' + self.chebi
+
+#         refs = [[
+#             wdi_core.WDItemID(value='Q902623', prop_nr='P248', is_reference=True),  # stated in
+#             wdi_core.WDExternalID(value=self.chebi, prop_nr='P683', is_reference=True),  # source element
+#             wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
+#             wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
+#             wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
+#         ]]
+#         print('ChEBI Main label is', item_label)
+
+#         elements = {
+#             'P683': self.chebi,
+#             'P233': self.canonical_smiles,
+#             'P2017': self.isomeric_smiles,
+#             'P235': self.stdinchikey,
+#             'P234': self.stdinchi[6:],
+#             'P231': self.cas,
+#             'P665': self.kegg,
+#             'P2057': self.hmdb,
+#             'P1579': self.beilstein,
+#             'P2064': self.knapsack,
+#             'P2275': self.who_inn
+#         }
+
+#         dtypes = {
+#             'P652': wdi_core.WDExternalID,
+#             'P683': wdi_core.WDExternalID,
+#             'P661': wdi_core.WDExternalID,
+#             'P2153': wdi_core.WDExternalID,
+#             'P233': wdi_core.WDString,
+#             'P2017': wdi_core.WDString,
+#             'P235': wdi_core.WDExternalID,
+#             'P234': wdi_core.WDExternalID,
+#             'P274': wdi_core.WDString,
+#             'P231': wdi_core.WDExternalID,
+#             'P232': wdi_core.WDExternalID,
+#             'P665': wdi_core.WDExternalID,
+#             'P2057': wdi_core.WDExternalID,
+#             'P1579': wdi_core.WDExternalID,
+#             'P2064': wdi_core.WDExternalID,
+#             'P2275': wdi_core.WDMonolingualText
+#         }
+
+#         # do not add isomeric smiles if no isomeric info is available
+#         if self.canonical_smiles == self.isomeric_smiles or len(self.isomeric_smiles) > 400:
+#             del elements['P2017']
+
+#         # do not try to add InChI longer than 400 chars
+#         if len(self.stdinchi[6:]) > 400:
+#             del elements['P234']
+
+#         if len(self.canonical_smiles) > 400:
+#             del elements['P233']
+
+#         data = []
+
+#         for k, v in elements.items():
+#             if not v:
+#                 continue
+
+#             print('{}:'.format(k), v)
+#             if isinstance(v, list) or isinstance(v, set):
+#                 for x in v:
+#                     data.append(dtypes[k](prop_nr=k, value=x, references=refs))
+#             else:
+#                 data.append(dtypes[k](prop_nr=k, value=v, references=refs))
+
+#         return data
 
 
 class GTPLMolecule(object):
-    def __init__(self, gtpl_id=None, cid=None, sid=None, inchi_key=None):
-        gtp_data = pd.read_csv('./iuphar/ligands.csv', low_memory=False,
-                               dtype={'PubChem SID': np.str, 'PubChem CID': np.str, 'Ligand id': np.str})
-
+    def __init__(self, gtpl_id=None, cid=None, sid=None, inchi_key=None, name=None):
+        gtp_data_path = str(importlib.resources.files('cdk_pywrapper.data').joinpath("ligands.csv"))
+        
+        gtp_data = pd.read_csv(
+            gtp_data_path,
+            comment='#',                 # skip any lines starting with #
+            skip_blank_lines=True,
+            skiprows=1,
+            low_memory=False,
+            dtype={'PubChem SID': 'str', 'PubChem CID': 'str', 'Ligand ID': 'str'}
+        )
         # remove all labelled or radioactive compounds as they have the same inchi key as unlabelled compounds
         gtp_data = gtp_data.loc[pd.isnull(gtp_data['Labelled'].values), :]
 
         print('gtpl inchi', inchi_key)
         if gtpl_id:
-            ind = gtp_data['Ligand id'].values == gtpl_id
+            ind = gtp_data['Ligand ID'].values == gtpl_id
         elif cid:
             ind = gtp_data['PubChem CID'].values == cid
         elif sid:
-            ind = gtp_data['PubChem CID'].values == sid
-        else:
+            ind = gtp_data['PubChem SID'].values == sid
+        elif inchi_key:
             ind = gtp_data['InChIKey'].values == inchi_key
-
+        else:
+            ind = gtp_data['Name'].values == name
 
         self.data = gtp_data.loc[ind, :]
 
@@ -667,7 +683,7 @@ class GTPLMolecule(object):
 
     @property
     def gtpl_id(self):
-        return self.data.loc[self.data_index, 'Ligand id']
+        return self.data.loc[self.data_index, 'Ligand ID']
 
     def to_wikidata(self):
         item_label = self.preferred_name if self.preferred_name else 'GTPL' + self.gtpl_id
@@ -804,8 +820,11 @@ class ChEMBLMolecule(object):
     def __init__(self, chembl_id=None, inchi_key=None):
         ci = chembl_id if chembl_id is not None else inchi_key
 
-        url = 'https://www.ebi.ac.uk/chembl/api/data/molecule/{}.json'.format(ci.upper())
-        r = requests.get(url)
+        url = 'https://www.ebi.ac.uk/chembl/api/data/molecule/{}'.format(ci.upper())
+
+        params = {'format': 'json'}
+
+        r = requests.get(url, params=params)
         if r.status_code == 404:
             raise ValueError('ChEMBL ID {} not found in ChEMBL'.format(chembl_id))
         self.compound = r.json()
@@ -838,207 +857,207 @@ class ChEMBLMolecule(object):
     def chebi(self):
         return self.compound['chebi_par_id'] if 'chebi_par_id' in self.compound else None
 
-    def to_wikidata(self):
-        item_label = self.preferred_name if self.preferred_name else self.chembl_id
+    # def to_wikidata(self):
+    #     item_label = self.preferred_name if self.preferred_name else self.chembl_id
 
-        refs = [[
-            wdi_core.WDItemID(value='Q6120337', prop_nr='P248', is_reference=True),  # stated in
-            wdi_core.WDExternalID(value=self.chembl_id, prop_nr='P592', is_reference=True),  # source element
-            wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
-            wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
-            wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
-        ]]
-        print('ChEMBL Main label is', item_label)
+    #     refs = [[
+    #         wdi_core.WDItemID(value='Q6120337', prop_nr='P248', is_reference=True),  # stated in
+    #         wdi_core.WDExternalID(value=self.chembl_id, prop_nr='P592', is_reference=True),  # source element
+    #         wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
+    #         wdi_core.WDMonolingualText(value=item_label[0:400], language='en', prop_nr='P1476', is_reference=True),
+    #         wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
+    #     ]]
+    #     print('ChEMBL Main label is', item_label)
 
-        cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
-        isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
-        canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
+    #     cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
+    #     isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
+    #     canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
 
-        elements = {
-            'P592': self.chembl_id,
-            'P233': canonical_smiles,
-            'P2017': isomeric_smiles,
-            'P235': self.stdinchikey,
-            'P234': self.stdinchi[6:],
-            'P683': str(self.chebi) if self.chebi else None
-        }
+    #     elements = {
+    #         'P592': self.chembl_id,
+    #         'P233': canonical_smiles,
+    #         'P2017': isomeric_smiles,
+    #         'P235': self.stdinchikey,
+    #         'P234': self.stdinchi[6:],
+    #         'P683': str(self.chebi) if self.chebi else None
+    #     }
 
-        dtypes = {
-            'P592': wdi_core.WDExternalID,
-            'P683': wdi_core.WDExternalID,
-            'P661': wdi_core.WDExternalID,
-            'P2153': wdi_core.WDExternalID,
-            'P233': wdi_core.WDString,
-            'P2017': wdi_core.WDString,
-            'P235': wdi_core.WDExternalID,
-            'P234': wdi_core.WDExternalID,
-            'P274': wdi_core.WDString
-        }
+    #     dtypes = {
+    #         'P592': wdi_core.WDExternalID,
+    #         'P683': wdi_core.WDExternalID,
+    #         'P661': wdi_core.WDExternalID,
+    #         'P2153': wdi_core.WDExternalID,
+    #         'P233': wdi_core.WDString,
+    #         'P2017': wdi_core.WDString,
+    #         'P235': wdi_core.WDExternalID,
+    #         'P234': wdi_core.WDExternalID,
+    #         'P274': wdi_core.WDString
+    #     }
 
-        # do not add isomeric smiles if no isomeric info is available
-        if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
-            del elements['P2017']
+    #     # do not add isomeric smiles if no isomeric info is available
+    #     if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
+    #         del elements['P2017']
 
-        # do not try to add InChI longer than 400 chars
-        if len(self.stdinchi[6:]) > 400:
-            del elements['P234']
+    #     # do not try to add InChI longer than 400 chars
+    #     if len(self.stdinchi[6:]) > 400:
+    #         del elements['P234']
 
-        if len(self.smiles) > 400:
-            del elements['P233']
+    #     if len(self.smiles) > 400:
+    #         del elements['P233']
 
-        data = [
-            wdi_core.WDQuantity(value=self.monoisotopic_mass, prop_nr='P2067', upper_bound=self.monoisotopic_mass,
-                                lower_bound=self.monoisotopic_mass, unit='http://www.wikidata.org/entity/Q483261',
-                                references=refs)
-        ]
+    #     data = [
+    #         wdi_core.WDQuantity(value=self.monoisotopic_mass, prop_nr='P2067', upper_bound=self.monoisotopic_mass,
+    #                             lower_bound=self.monoisotopic_mass, unit='http://www.wikidata.org/entity/Q483261',
+    #                             references=refs)
+    #     ]
 
-        for k, v in elements.items():
-            if not v:
-                continue
+    #     for k, v in elements.items():
+    #         if not v:
+    #             continue
 
-            print('{}:'.format(k), v)
-            if isinstance(v, list) or isinstance(v, set):
-                for x in v:
-                    data.append(dtypes[k](prop_nr=k, value=x, references=refs))
-            else:
-                data.append(dtypes[k](prop_nr=k, value=v, references=refs))
+    #         print('{}:'.format(k), v)
+    #         if isinstance(v, list) or isinstance(v, set):
+    #             for x in v:
+    #                 data.append(dtypes[k](prop_nr=k, value=x, references=refs))
+    #         else:
+    #             data.append(dtypes[k](prop_nr=k, value=v, references=refs))
 
-        return data
+    #     return data
 
-class ChemSpiderMolecule(object):
-    token = ''
+# class ChemSpiderMolecule(object):
+#     token = ''
 
-    def __init__(self, csid=None, mol=None):
-        if csid:
-            cs = chemspipy.ChemSpider(ChemSpiderMolecule.token)
-            self.compound = cs.get_compound(csid)
-        else:
-            self.compound = mol
+#     def __init__(self, csid=None, mol=None):
+#         if csid:
+#             cs = chemspipy.ChemSpider(ChemSpiderMolecule.token)
+#             self.compound = cs.get_compound(csid)
+#         else:
+#             self.compound = mol
 
-        # self._inchikey = self.compound.inchikey
-        # self._inchi = self.compound.inchi
-        # self._common_name = self.compound.common_name
-        # self._smiles = self.compound.smiles
-
-
-        # ikey = 'HGCGQDMQKGRJNO-UHFFFAOYSA-N'
-        # ikey = 'MTNISTQLDNOGTM-UHFFFAOYSA-N'
-        # ikey = 'ZWAWYSBJNBVQHP-UHFFFAOYSA-N'
+#         # self._inchikey = self.compound.inchikey
+#         # self._inchi = self.compound.inchi
+#         # self._common_name = self.compound.common_name
+#         # self._smiles = self.compound.smiles
 
 
-    @property
-    def stdinchikey(self):
-        return self.compound.stdinchikey
-
-    @property
-    def stdinchi(self):
-        return self.compound.stdinchi
-
-    @property
-    def common_name(self):
-        try:
-            return self.compound.common_name
-        except KeyError:
-            return None
-
-    @property
-    def smiles(self):
-        return self.compound.smiles
-
-    @property
-    def csid(self):
-        return str(self.compound.csid)
-
-    @property
-    def monoisotopic_mass(self):
-        return self.compound.monoisotopic_mass
+#         # ikey = 'HGCGQDMQKGRJNO-UHFFFAOYSA-N'
+#         # ikey = 'MTNISTQLDNOGTM-UHFFFAOYSA-N'
+#         # ikey = 'ZWAWYSBJNBVQHP-UHFFFAOYSA-N'
 
 
-    def to_wikidata(self):
-        item_label = self.common_name if self.common_name else self.csid
+#     @property
+#     def stdinchikey(self):
+#         return self.compound.stdinchikey
 
-        pubchem_ref = [[
-            wdi_core.WDItemID(value='Q2311683', prop_nr='P248', is_reference=True),  # stated in
-            wdi_core.WDExternalID(value=self.csid, prop_nr='P661', is_reference=True),  # source element
-            wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
-            wdi_core.WDMonolingualText(value=item_label[0:200], language='en', prop_nr='P1476', is_reference=True),
-            wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
-        ]]
-        print('Main label is', item_label)
+#     @property
+#     def stdinchi(self):
+#         return self.compound.stdinchi
 
-        try:
-            cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
-            isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
-            canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
-        except ValueError as e:
-            print(e)
-            print('Error when trying to convert ChemSpider SMILES')
-            canonical_smiles = None
-            isomeric_smiles = None
+#     @property
+#     def common_name(self):
+#         try:
+#             return self.compound.common_name
+#         except KeyError:
+#             return None
 
-        elements = {
-            'P661': self.csid,
-            'P233': canonical_smiles,
-            'P2017': isomeric_smiles,
-            'P235': self.stdinchikey,
-            'P234': self.stdinchi[6:],
-        }
+#     @property
+#     def smiles(self):
+#         return self.compound.smiles
 
-        dtypes = {
-            'P661': wdi_core.WDExternalID,
-            'P2153': wdi_core.WDExternalID,
-            'P233': wdi_core.WDString,
-            'P2017': wdi_core.WDString,
-            'P235': wdi_core.WDExternalID,
-            'P234': wdi_core.WDExternalID,
-            'P274': wdi_core.WDString
-        }
+#     @property
+#     def csid(self):
+#         return str(self.compound.csid)
 
-        # do not add isomeric smiles if no isomeric info is available
-        if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
-            del elements['P2017']
+#     @property
+#     def monoisotopic_mass(self):
+#         return self.compound.monoisotopic_mass
 
-        # do not try to add InChI longer than 400 chars
-        if len(self.stdinchi[6:]) > 400:
-            del elements['P234']
 
-        if len(self.smiles) > 400:
-            del elements['P233']
+#     def to_wikidata(self):
+#         item_label = self.common_name if self.common_name else self.csid
 
-        data = []
-        if float(self.monoisotopic_mass) != 0:
-            data = [
-                wdi_core.WDQuantity(value=self.monoisotopic_mass, prop_nr='P2067', upper_bound=self.monoisotopic_mass,
-                                    lower_bound=self.monoisotopic_mass, unit='http://www.wikidata.org/entity/Q483261',
-                                    references=pubchem_ref)
-            ]
+#         pubchem_ref = [[
+#             wdi_core.WDItemID(value='Q2311683', prop_nr='P248', is_reference=True),  # stated in
+#             wdi_core.WDExternalID(value=self.csid, prop_nr='P661', is_reference=True),  # source element
+#             wdi_core.WDItemID(value='Q1860', prop_nr='P407', is_reference=True),  # language of work
+#             wdi_core.WDMonolingualText(value=item_label[0:200], language='en', prop_nr='P1476', is_reference=True),
+#             wdi_core.WDTime(time=time.strftime('+%Y-%m-%dT00:00:00Z'), prop_nr='P813', is_reference=True)  # retrieved
+#         ]]
+#         print('Main label is', item_label)
 
-        for k, v in elements.items():
-            if not v:
-                continue
+#         try:
+#             cmpnd = Compound(compound_string=self.smiles, identifier_type='smiles')
+#             isomeric_smiles = cmpnd.get_smiles(smiles_type='isomeric')
+#             canonical_smiles = cmpnd.get_smiles(smiles_type='generic')
+#         except ValueError as e:
+#             print(e)
+#             print('Error when trying to convert ChemSpider SMILES')
+#             canonical_smiles = None
+#             isomeric_smiles = None
 
-            print('{}:'.format(k), v)
-            if isinstance(v, list) or isinstance(v, set):
-                for x in v:
-                    data.append(dtypes[k](prop_nr=k, value=x, references=pubchem_ref))
-            else:
-                data.append(dtypes[k](prop_nr=k, value=v, references=pubchem_ref))
+#         elements = {
+#             'P661': self.csid,
+#             'P233': canonical_smiles,
+#             'P2017': isomeric_smiles,
+#             'P235': self.stdinchikey,
+#             'P234': self.stdinchi[6:],
+#         }
 
-        return data
+#         dtypes = {
+#             'P661': wdi_core.WDExternalID,
+#             'P2153': wdi_core.WDExternalID,
+#             'P233': wdi_core.WDString,
+#             'P2017': wdi_core.WDString,
+#             'P235': wdi_core.WDExternalID,
+#             'P234': wdi_core.WDExternalID,
+#             'P274': wdi_core.WDString
+#         }
 
-    @staticmethod
-    def search(search_string):
-        molecules = []
+#         # do not add isomeric smiles if no isomeric info is available
+#         if canonical_smiles == isomeric_smiles or len(self.smiles) > 400:
+#             del elements['P2017']
 
-        cs = chemspipy.ChemSpider(ChemSpiderMolecule.token)
+#         # do not try to add InChI longer than 400 chars
+#         if len(self.stdinchi[6:]) > 400:
+#             del elements['P234']
 
-        for x in cs.search(search_string):
-            molecules.append(ChemSpiderMolecule(mol=x))
-            # print(x.common_name)
-            # print(x.stdinchikey)
-            # print(x.stdinchi)
-            # print(x.csid)
-        return molecules
+#         if len(self.smiles) > 400:
+#             del elements['P233']
+
+#         data = []
+#         if float(self.monoisotopic_mass) != 0:
+#             data = [
+#                 wdi_core.WDQuantity(value=self.monoisotopic_mass, prop_nr='P2067', upper_bound=self.monoisotopic_mass,
+#                                     lower_bound=self.monoisotopic_mass, unit='http://www.wikidata.org/entity/Q483261',
+#                                     references=pubchem_ref)
+#             ]
+
+#         for k, v in elements.items():
+#             if not v:
+#                 continue
+
+#             print('{}:'.format(k), v)
+#             if isinstance(v, list) or isinstance(v, set):
+#                 for x in v:
+#                     data.append(dtypes[k](prop_nr=k, value=x, references=pubchem_ref))
+#             else:
+#                 data.append(dtypes[k](prop_nr=k, value=v, references=pubchem_ref))
+
+#         return data
+
+#     @staticmethod
+#     def search(search_string):
+#         molecules = []
+
+#         cs = chemspipy.ChemSpider(ChemSpiderMolecule.token)
+
+#         for x in cs.search(search_string):
+#             molecules.append(ChemSpiderMolecule(mol=x))
+#             # print(x.common_name)
+#             # print(x.stdinchikey)
+#             # print(x.stdinchi)
+#             # print(x.csid)
+#         return molecules
 
 
 class PubChemMolecule(object):
@@ -1318,7 +1337,7 @@ class PubChemMolecule(object):
             charge = max(zwitterion_charge_count)
 
         if zwitterion_charge_count.count(charge) > 1:
-            x = [len(simplejson.dumps(PubChemMolecule._retrieve_basic_compound_info(cids[c])))
+            x = [len(json.dumps(PubChemMolecule._retrieve_basic_compound_info(cids[c])))
                  if z == charge else 0 for c, z in enumerate(zwitterion_charge_count)]
             return cids[x.index(max(x))]
         else:
@@ -1374,7 +1393,7 @@ class PubChemMolecule(object):
                 r = response.json()['results']['bindings']
                 print('length response items', len(r))
 
-            except simplejson.JSONDecodeError as e:
+            except json.JSONDecodeError as e:
                 print(e)
                 print('Error retrieving PubChem Assay Ids')
 
@@ -1400,7 +1419,7 @@ class PubChemMolecule(object):
         try:
             # r = PubChemMolecule.s.get(url, headers=PubChemMolecule.headers).json()
             r = requests.get(url, headers=PubChemMolecule.headers).json()
-        except simplejson.JSONDecodeError as e:
+        except json.JSONDecodeError as e:
             # print(e.__str__())
             print('PubChem does not have this InChI key', ikey)
             return []
