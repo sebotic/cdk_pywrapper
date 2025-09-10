@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/sebotic-cdk-pywrapper-badge.png)](https://mseep.ai/app/sebotic-cdk-pywrapper)
+
 ## Python Wrapper for the Chemistry Development kit
 
 ### tl;dr
